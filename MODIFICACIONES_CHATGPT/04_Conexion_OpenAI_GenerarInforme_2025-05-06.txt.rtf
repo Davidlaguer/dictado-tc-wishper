@@ -1,0 +1,466 @@
+TÍTULO DEL CAMBIO: Movimiento libre del plugin flotante (drag & drop)  
+FECHA: 2025-05-06
+
+DESCRIPCIÓN DEL CAMBIO:  
+Se ha implementado la capacidad de mover el plugin flotante manualmente sobre la pantalla, tanto con ratón (desktop) como con dedo (iPad/touch).  
+El movimiento se activa al arrastrar la barra superior (`#drag-bar`) y actualiza dinámicamente la posición del contenedor `#plugin-container`.
+
+Objetivos alcanzados:
+- Permitir al usuario reposicionar libremente el plugin sin afectar su contenido.
+- Soporte completo para dispositivos táctiles (eventos `touchstart`, `touchmove`, `touchend`).
+- Compatibilidad con ratón (eventos `mousedown`, `mousemove`, `mouseup`).
+- Conservación del resto de funcionalidades visuales y de dictado.
+
+ARCHIVOS MODIFICADOS / IMPLICADOS:  
+- script.js  
+- index.html (solo si se introdujo `#drag-bar`)
+
+--------------------------------------------------
+ARCHIVO: script.js
+
+>> CÓDIGO DESPUÉS DEL CAMBIO:
+// script.js
+
+// === CONFIGURACIÓN DE WEBSOCKET ===
+const socket = io('http://localhost:5050');
+
+// === VARIABLES DEL DOM ===
+const micButton = document.getElementById('mic-button');
+const transcriptionBox = document.getElementById('transcription');
+let isRecording = false;
+let mediaRecorder;
+
+// === SOCKET.IO EVENTS ===
+socket.on('connect', () => console.log('🔗 Socket conectado'));
+socket.on('transcription', ({ text }) => {
+  console.log('📤 Fragmento transcrito:', text);
+  if (text) {
+    transcriptionBox.innerHTML += text + '<br>';
+    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+  }
+});
+
+// === CONTROL DEL BOTÓN DE MICRÓFONO ===
+micButton.addEventListener('click', async () => {
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start(5000); // envía trozos cada 5 segundos
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+          e.data.arrayBuffer().then(buf => {
+            socket.emit('audio_chunk', { chunk: new Uint8Array(buf) });
+          });
+        }
+      };
+
+      mediaRecorder.onstart = () => {
+        micButton.classList.add('active');
+        console.log('🎤 Inicio streaming audio');
+        isRecording = true;
+      };
+
+      mediaRecorder.onstop = () => {
+        micButton.classList.remove('active');
+        console.log('🎤 Fin streaming audio');
+        isRecording = false;
+      };
+
+    } catch (err) {
+      alert('Error accediendo al micrófono: ' + err.message);
+    }
+  } else {
+    mediaRecorder.stop();
+  }
+});
+
+// === DOMContentLoaded: funcionalidades existentes ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Generar informe
+  const generateBtn = document.getElementById('generate-btn');
+  const popup = document.getElementById('popup');
+  const popupContent = document.getElementById('popup-content');
+  const popupClose = document.getElementById('popup-close');
+
+  generateBtn.addEventListener('click', () => {
+    const dictado = transcriptionBox.textContent.trim();
+    if (!dictado) {
+      alert('Dictado vacío.');
+      return;
+    }
+    const informe = generarInforme(dictado);
+    mostrarPopup(informe);
+    guardarEnHistorial(informe);
+  });
+
+  popupClose.addEventListener('click', () => {
+    popup.style.display = 'none';
+  });
+
+  // Historial
+  const historialBtn = document.getElementById('historial-button');
+  const historialList = document.getElementById('historial-list');
+  historialBtn.addEventListener('click', () => {
+    historialList.classList.toggle('show');
+  });
+
+  function guardarEnHistorial(texto) {
+    const fecha = new Date().toLocaleString();
+    const item = document.createElement('li');
+    item.textContent = `[${fecha}] ${texto.substring(0, 50)}...`;
+    historialList.appendChild(item);
+  }
+
+  // Atajos personalizados
+  const atajoBtn = document.getElementById('atajo-button');
+  const atajoForm = document.getElementById('atajo-form');
+  const atajoInput = document.getElementById('atajo-clave');
+  const sustitucionInput = document.getElementById('atajo-sustitucion');
+  const crearAtajoBtn = document.getElementById('crear-atajo-button');
+  const atajosGuardadosList = document.getElementById('atajos-guardados');
+  const mostrarAtajosBtn = document.getElementById('mostrar-atajos');
+
+  atajoBtn.addEventListener('click', () => atajoForm.classList.toggle('show'));
+
+  crearAtajoBtn.addEventListener('click', () => {
+    const clave = atajoInput.value.trim();
+    const valor = sustitucionInput.value.trim();
+    if (clave && valor) {
+      localStorage.setItem(`atajo_${clave}`, valor);
+      atajoInput.value = '';
+      sustitucionInput.value = '';
+      alert('Atajo guardado');
+      mostrarAtajos();
+    }
+  });
+
+  mostrarAtajosBtn.addEventListener('click', () => atajosGuardadosList.classList.toggle('show'));
+
+  function mostrarAtajos() {
+    atajosGuardadosList.innerHTML = '';
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('atajo_')) {
+        const valor = localStorage.getItem(key);
+        const item = document.createElement('li');
+        item.textContent = `${key.replace('atajo_', '')} → ${valor}`;
+        atajosGuardadosList.appendChild(item);
+      }
+    });
+  }
+
+  mostrarAtajos();
+});
+
+// === FUNCIONES AUXILIARES ===
+function generarInforme(texto) {
+  let procesado = texto;
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('atajo_')) {
+      const clave = key.replace('atajo_', '');
+      const valor = localStorage.getItem(key);
+      const regex = new RegExp(`\\b${clave}\\b`, 'gi');
+      procesado = procesado.replace(regex, valor);
+    }
+  });
+  return procesado;
+}
+
+function mostrarPopup(texto) {
+  const popup = document.getElementById('popup');
+  const popupContent = document.getElementById('popup-content');
+  popupContent.innerHTML = texto.replace(/\n/g, '<br>');
+  popup.style.display = 'block';
+}
+
+function cerrarPopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+// === DRAG & DROP DEL POPUP ===
+const pluginContainer = document.getElementById('plugin-container');
+const dragBar = document.getElementById('drag-bar');
+let isDragging = false;
+let offsetX = 0;
+let offsetY = 0;
+
+// Mouse events
+dragBar.addEventListener('mousedown', e => {
+  isDragging = true;
+  const rect = pluginContainer.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+});
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  pluginContainer.style.left = `${e.clientX - offsetX}px`;
+  pluginContainer.style.top = `${e.clientY - offsetY}px`;
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+// Touch events
+dragBar.addEventListener('touchstart', e => {
+  isDragging = true;
+  const touch = e.touches[0];
+  const rect = pluginContainer.getBoundingClientRect();
+  offsetX = touch.clientX - rect.left;
+  offsetY = touch.clientY - rect.top;
+});
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const touch = e.touches[0];
+  pluginContainer.style.left = `${touch.clientX - offsetX}px`;
+  pluginContainer.style.top = `${touch.clientY - offsetY}px`;
+});
+document.addEventListener('touchend', () => {
+  isDragging = false;
+});
+
+
+--------------------------------------------------
+ARCHIVO: index.html
+
+>> CÓDIGO DESPUÉS DEL CAMBIO:
+[pega aquí la parte relevante del HTML donde aparece el `#drag-bar` y `#plugin-container`]
+
+--------------------------------------------------
+
+RESULTADO:  
+✅ Plugin se puede mover libremente con ratón y táctil.  
+✅ Movimiento fluido y sin interferir con otras funcionalidades.  
+✅ No se rompe la estructura visual ni la transcripción.  
+⏳ Pendiente: opcionalmente guardar la posición final (ej. en `localStorage`) para recordar la ubicación entre sesiones.
+
+
+
+SEGUNDA MODIFICACION:
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dictado Informes TC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="plugin-container">
+  <!-- Drag-handle ligero -->
+  <div id="drag-bar">
+    <span class="bar"></span>
+    <span class="bar"></span>
+    <span class="bar"></span>
+  </div>
+
+  <!-- Transcripción (centrada) -->
+  <div id="transcription" class="dictated-text" contenteditable="true"></div>
+
+  <!-- Micrófono centrado con SVG -->
+  <div class="center-controls">
+    <button id="mic-button" aria-label="Micrófono">
+      <svg xmlns="http://www.w3.org/2000/svg" height="28" width="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19.93V22h2v-2.07a8.001 8.001 0 0 0 6.93-6.93H18a6 6 0 0 1-12 0H4.07A8.001 8.001 0 0 0 11 19.93z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Botón Generar informe -->
+  <div class="main-action">
+    <button id="generate-btn">Generar informe</button>
+  </div>
+
+  <!-- Controles secundarios -->
+  <div class="secondary-actions">
+    <button id="reset-btn">♻️ Nuevo dictado</button>
+    <div class="dropdown">
+      <button id="atajo-button">⚙️ Atajos</button>
+      <div id="atajo-form" class="dropdown-content">
+        <strong>➕ Crear nuevo atajo</strong><br>
+        <input type="text" id="atajo-clave" placeholder="Palabra clave">
+        <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
+        <button id="crear-atajo-button">Guardar atajo</button>
+        <hr>
+        <strong>📂 Ver atajos guardados</strong><br>
+        <button id="mostrar-atajos">Mostrar/Ocultar</button>
+        <ul id="atajos-guardados"></ul>
+      </div>
+    </div>
+    <div class="dropdown">
+      <button id="historial-button">🗂️ Historial</button>
+      <ul id="historial-list"></ul>
+    </div>
+  </div>
+
+  <!-- Pop-up informe generado -->
+  <div id="popup">
+    <h3>INFORME GENERADO</h3>
+    <div id="popup-content"></div>
+    <button onclick="cerrarPopup()">Copiar</button>
+    <button onclick="cerrarPopup()">Exportar PDF</button>
+    <button id="popup-close">Cerrar</button>
+  </div>
+</div>
+
+<!-- Cliente Socket.IO -->
+<script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+<!-- Script principal -->
+<script src="script.js"></script>
+</body>
+</html>
+
+// script.js
+
+// === CONFIGURACIÓN DE WEBSOCKET ===
+const socket = io('http://localhost:5050');
+
+// === VARIABLES DEL DOM ===
+const micButton = document.getElementById('mic-button');
+const transcriptionBox = document.getElementById('transcription');
+let isRecording = false;
+let mediaRecorder;
+
+// === SOCKET.IO EVENTS ===
+socket.on('connect', () => console.log('🔗 Socket conectado'));
+socket.on('transcription', ({ text }) => {
+  console.log('📤 Fragmento transcrito:', text);
+  if (text) {
+    transcriptionBox.innerHTML += text + '<br>';
+    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+  }
+});
+
+// === CONTROL DEL BOTÓN DE MICRÓFONO ===
+micButton.addEventListener('click', async () => {
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start(5000); // envía trozos cada 5 segundos
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+          e.data.arrayBuffer().then(buf => {
+            socket.emit('audio_chunk', { chunk: new Uint8Array(buf) });
+          });
+        }
+      };
+
+      mediaRecorder.onstart = () => {
+        micButton.classList.add('active');
+        console.log('🎤 Inicio streaming audio');
+        isRecording = true;
+      };
+
+      mediaRecorder.onstop = () => {
+        micButton.classList.remove('active');
+        console.log('🎤 Fin streaming audio');
+        isRecording = false;
+      };
+
+    } catch (err) {
+      alert('Error accediendo al micrófono: ' + err.message);
+    }
+  } else {
+    mediaRecorder.stop();
+  }
+});
+
+// === DOMContentLoaded: funcionalidades existentes ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Generar informe
+  const generateBtn = document.getElementById('generate-btn');
+  const popup = document.getElementById('popup');
+  const popupContent = document.getElementById('popup-content');
+  const popupClose = document.getElementById('popup-close');
+
+  generateBtn.addEventListener('click', () => {
+    const dictado = transcriptionBox.textContent.trim();
+    if (!dictado) {
+      alert('Dictado vacío.');
+      return;
+    }
+    const informe = generarInforme(dictado);
+    mostrarPopup(informe);
+    guardarEnHistorial(informe);
+  });
+
+  popupClose.addEventListener('click', () => {
+    popup.style.display = 'none';
+  });
+
+  // Historial
+  const historialBtn = document.getElementById('historial-button');
+  const historialList = document.getElementById('historial-list');
+  historialBtn.addEventListener('click', () => {
+    historialList.classList.toggle('show');
+  });
+
+  function guardarEnHistorial(texto) {
+    const fecha = new Date().toLocaleString();
+    const item = document.createElement('li');
+    item.textContent = `[${fecha}] ${texto.substring(0, 50)}...`;
+    historialList.appendChild(item);
+  }
+
+  // Atajos personalizados
+  const atajoBtn = document.getElementById('atajo-button');
+  const atajoForm = document.getElementById('atajo-form');
+  const atajoInput = document.getElementById('atajo-clave');
+  const sustitucionInput = document.getElementById('atajo-sustitucion');
+  const crearAtajoBtn = document.getElementById('crear-atajo-button');
+  const atajosGuardadosList = document.getElementById('atajos-guardados');
+  const mostrarAtajosBtn = document.getElementById('mostrar-atajos');
+
+  atajoBtn.addEventListener('click', () => atajoForm.classList.toggle('show'));
+  crearAtajoBtn.addEventListener('click', () => {
+    const clave = atajoInput.value.trim();
+    const valor = sustitucionInput.value.trim();
+    if (clave && valor) {
+      localStorage.setItem(`atajo_${clave}`, valor);
+      atajoInput.value = '';
+      sustitucionInput.value = '';
+      alert('Atajo guardado');
+      mostrarAtajos();
+    }
+  });
+  mostrarAtajosBtn.addEventListener('click', () => atajosGuardadosList.classList.toggle('show'));
+  function mostrarAtajos() {
+    atajosGuardadosList.innerHTML = '';
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('atajo_')) {
+        const valor = localStorage.getItem(key);
+        const item = document.createElement('li');
+        item.textContent = `${key.replace('atajo_', '')} → ${valor}`;
+        atajosGuardadosList.appendChild(item);
+      }
+    });
+  }
+  mostrarAtajos();
+});
+
+// === FUNCIONES AUXILIARES ===
+function generarInforme(texto) {
+  let procesado = texto;
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('atajo_')) {
+      const clave = key.replace('atajo_', '');
+      const valor = localStorage.getItem(key); const regex = new RegExp(`\\b${clave}\\b`, 'gi');
+      procesado = procesado.replace(regex, valor);
+    }
+  });
+  return procesado;
+}
+
+function mostrarPopup(texto) {
+  const popup = document.getElementById('popup');
+  const popupContent = document.getElementById('popup-content');
+  popupContent.innerHTML = texto.replace(/\n/g, '<br>');
+  popup.style.display = 'block';
+}
+
+function cerrarPopup() {
+  document.getElementById('popup').style.display = 'none';
+}

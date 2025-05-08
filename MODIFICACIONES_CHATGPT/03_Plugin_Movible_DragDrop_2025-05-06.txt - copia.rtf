@@ -1,0 +1,858 @@
+TÍTULO DEL CAMBIO: Conexión directa con OpenAI para generación de informes  
+FECHA: 2025-05-06
+
+DESCRIPCIÓN DEL CAMBIO:  
+Se ha añadido la lógica completa de conexión desde el botón "Generar informe" en el frontend hacia un endpoint backend (`/informe`) que interactúa con la Assistants API de OpenAI.  
+Se envía el texto procesado del dictado (con atajos aplicados) como JSON, y se espera una respuesta con el informe estructurado generado.
+
+Objetivos alcanzados:
+- Desactivar botón mientras se genera el informe (estado visual).
+- Mostrar mensaje de carga mientras se espera la respuesta.
+- Recibir respuesta estructurada del backend y mostrarla en un popup visual (`#popup-content`).
+- Guardar el informe en el historial visual (`#historial-list`).
+- Manejar errores de red o respuesta vacía con mensajes apropiados.
+
+ARCHIVOS MODIFICADOS / IMPLICADOS:  
+- script.js (frontend: lógica del botón "Generar informe")
+- index.js (backend, no incluido aquí pero debe tener la ruta `/informe` que conecta con OpenAI)
+
+
+--------------------------------------------------
+ARCHIVO: script.js
+
+>> CÓDIGO DESPUÉS DEL CAMBIO:
+// script.js
+
+// === CONFIGURACIÓN DE WEBSOCKET ===
+const socket = io('http://localhost:5050');
+
+// === VARIABLES DEL DOM ===
+const micButton = document.getElementById('mic-button');
+const transcriptionBox = document.getElementById('transcription');
+let isRecording = false;
+let mediaRecorder;
+
+// === SOCKET.IO EVENTS ===
+socket.on('connect', () => console.log('🔗 Socket conectado'));
+socket.on('transcription', ({ text }) => {
+  console.log('📤 Fragmento transcrito:', text);
+  if (text) {
+    transcriptionBox.innerHTML += text + '<br>';
+    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+  }
+});
+
+// === CONTROL DEL BOTÓN DE MICRÓFONO ===
+micButton.addEventListener('click', async () => {
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start(5000); // envía trozos cada 5 segundos
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+          e.data.arrayBuffer().then(buf => {
+            socket.emit('audio_chunk', { chunk: new Uint8Array(buf) });
+          });
+        }
+      };
+
+      mediaRecorder.onstart = () => {
+        micButton.classList.add('active');
+        console.log('🎤 Inicio streaming audio');
+        isRecording = true;
+      };
+
+      mediaRecorder.onstop = () => {
+        micButton.classList.remove('active');
+        console.log('🎤 Fin streaming audio');
+        isRecording = false;
+      };
+
+    } catch (err) {
+      alert('Error accediendo al micrófono: ' + err.message);
+    }
+  } else {
+    mediaRecorder.stop();
+  }
+});
+
+// === DOMContentLoaded: funcionalidades existentes ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Generar informe
+  const generateBtn = document.getElementById('generate-btn');
+  const popup = document.getElementById('popup');
+  const popupContent = document.getElementById('popup-content');
+  const popupClose = document.getElementById('popup-close');
+
+  generateBtn.addEventListener('click', () => {
+    const dictado = transcriptionBox.textContent.trim();
+    if (!dictado) {
+      alert('Dictado vacío.');
+      return;
+    }
+    const informe = generarInforme(dictado);
+    mostrarPopup(informe);
+    guardarEnHistorial(informe);
+  });
+
+  popupClose.addEventListener('click', () => {
+    popup.style.display = 'none';
+  });
+
+  // Historial
+  const historialBtn = document.getElementById('historial-button');
+  const historialList = document.getElementById('historial-list');
+  historialBtn.addEventListener('click', () => {
+    historialList.classList.toggle('show');
+  });
+
+  function guardarEnHistorial(texto) {
+    const fecha = new Date().toLocaleString();
+    const item = document.createElement('li');
+    item.textContent = `[${fecha}] ${texto.substring(0, 50)}...`;
+    historialList.appendChild(item);
+  }
+
+  // Atajos personalizados
+  const atajoBtn = document.getElementById('atajo-button');
+  const atajoForm = document.getElementById('atajo-form');
+  const atajoInput = document.getElementById('atajo-clave');
+  const sustitucionInput = document.getElementById('atajo-sustitucion');
+  const crearAtajoBtn = document.getElementById('crear-atajo-button');
+  const atajosGuardadosList = document.getElementById('atajos-guardados');
+  const mostrarAtajosBtn = document.getElementById('mostrar-atajos');
+
+  atajoBtn.addEventListener('click', () => atajoForm.classList.toggle('show'));
+
+  crearAtajoBtn.addEventListener('click', () => {
+    const clave = atajoInput.value.trim();
+    const valor = sustitucionInput.value.trim();
+    if (clave && valor) {
+      localStorage.setItem(`atajo_${clave}`, valor);
+      atajoInput.value = '';
+      sustitucionInput.value = '';
+      alert('Atajo guardado');
+      mostrarAtajos();
+    }
+  });
+
+  mostrarAtajosBtn.addEventListener('click', () => atajosGuardadosList.classList.toggle('show'));
+
+  function mostrarAtajos() {
+    atajosGuardadosList.innerHTML = '';
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('atajo_')) {
+        const valor = localStorage.getItem(key);
+        const item = document.createElement('li');
+        item.textContent = `${key.replace('atajo_', '')} → ${valor}`;
+        atajosGuardadosList.appendChild(item);
+      }
+    });
+  }
+
+  mostrarAtajos();
+});
+
+// === FUNCIONES AUXILIARES ===
+function generarInforme(texto) {
+  let procesado = texto;
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('atajo_')) {
+      const clave = key.replace('atajo_', '');
+      const valor = localStorage.getItem(key);
+      const regex = new RegExp(`\\b${clave}\\b`, 'gi');
+      procesado = procesado.replace(regex, valor);
+    }
+  });
+  return procesado;
+}
+
+function mostrarPopup(texto) {
+  const popup = document.getElementById('popup');
+  const popupContent = document.getElementById('popup-content');
+  popupContent.innerHTML = texto.replace(/\n/g, '<br>');
+  popup.style.display = 'block';
+}
+
+function cerrarPopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+// === DRAG & DROP DEL POPUP ===
+const pluginContainer = document.getElementById('plugin-container');
+const dragBar = document.getElementById('drag-bar');
+let isDragging = false;
+let offsetX = 0;
+let offsetY = 0;
+
+// Mouse events
+dragBar.addEventListener('mousedown', e => {
+  isDragging = true;
+  const rect = pluginContainer.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
+});
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  pluginContainer.style.left = `${e.clientX - offsetX}px`;
+  pluginContainer.style.top = `${e.clientY - offsetY}px`;
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+// Touch events
+dragBar.addEventListener('touchstart', e => {
+  isDragging = true;
+  const touch = e.touches[0];
+  const rect = pluginContainer.getBoundingClientRect();
+  offsetX = touch.clientX - rect.left;
+  offsetY = touch.clientY - rect.top;
+});
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const touch = e.touches[0];
+  pluginContainer.style.left = `${touch.clientX - offsetX}px`;
+  pluginContainer.style.top = `${touch.clientY - offsetY}px`;
+});
+document.addEventListener('touchend', () => {
+  isDragging = false;
+});
+
+
+--------------------------------------------------
+ARCHIVO: index.html
+
+>> CÓDIGO DESPUÉS DEL CAMBIO:
+[pega aquí la parte relevante del HTML donde aparece el `#drag-bar` y `#plugin-container`]
+
+--------------------------------------------------
+
+RESULTADO:  
+✅ Plugin se puede mover libremente con ratón y táctil.  
+✅ Movimiento fluido y sin interferir con otras funcionalidades.  
+✅ No se rompe la estructura visual ni la transcripción.  
+⏳ Pendiente: opcionalmente guardar la posición final (ej. en `localStorage`) para recordar la ubicación entre sesiones.
+
+
+
+INDEX HTML PRE CAMBIO:
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dictado Informes TC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="plugin-container">
+  <!-- Pestañita para arrastrar -->
+  <div id="drag-bar"></div>
+
+  <!-- Cuadro de transcripción -->
+  <div id="transcription" contenteditable="true"></div>
+
+  <!-- Botón micrófono -->
+  <div class="center-controls">
+    <button id="mic-button" aria-label="Micrófono">
+      <svg xmlns="http://www.w3.org/2000/svg" height="28" width="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19.93V22h2v-2.07a8.001 8.001 0 0 0 6.93-6.93H18a6 6 0 0 1-12 0H4.07A8.001 8.001 0 0 0 11 19.93z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Botón Generar informe -->
+  <div class="main-action">
+    <button id="generate-btn">Generar informe</button>
+  </div>
+
+  <!-- Controles secundarios -->
+  <div class="secondary-actions">
+    <button id="reset-btn">♻️ Nuevo dictado</button>
+
+    <div class="dropdown">
+      <button id="atajo-button">⚙️ Atajos</button>
+      <div id="atajo-form" class="dropdown-content">
+        <strong>➕ Crear nuevo atajo</strong><br>
+        <input type="text" id="atajo-clave" placeholder="Palabra clave">
+        <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
+        <button id="crear-atajo-button">Guardar atajo</button>
+        <hr>
+        <strong>📂 Ver atajos guardados</strong><br>
+        <button id="mostrar-atajos">Mostrar/Ocultar</button>
+        <ul id="atajos-guardados"></ul>
+      </div>
+    </div>
+
+    <div class="dropdown">
+      <button id="historial-button">🗂️ Historial</button>
+      <ul id="historial-list" class="dropdown-content"></ul>
+    </div>
+  </div>
+
+  <!-- Popup informe generado -->
+  <div id="popup">
+    <h3>INFORME GENERADO</h3>
+    <div id="popup-content"></div>
+    <button onclick="cerrarPopup()">Copiar</button>
+    <button onclick="cerrarPopup()">Exportar PDF</button>
+    <button id="popup-close">Cerrar</button>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
+
+INDEX HTML POST:
+
+# Plugin Flotante con Pestañita de Arrastre
+
+A continuación los tres archivos completos con la nueva pestañita de arrastre en la parte superior:
+
+---
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dictado Informes TC</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="plugin-container">
+  <!-- Pestañita para arrastrar -->
+  <div id="drag-bar"></div>
+
+  <!-- Cuadro de transcripción -->
+  <div id="transcription" contenteditable="true"></div>
+
+  <!-- Botón micrófono -->
+  <div class="center-controls">
+    <button id="mic-button" aria-label="Micrófono">
+      <svg xmlns="http://www.w3.org/2000/svg" height="28" width="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19.93V22h2v-2.07a8.001 8.001 0 0 0 6.93-6.93H18a6 6 0 0 1-12 0H4.07A8.001 8.001 0 0 0 11 19.93z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Botón Generar informe -->
+  <div class="main-action">
+    <button id="generate-btn">Generar informe</button>
+  </div>
+
+  <!-- Controles secundarios -->
+  <div class="secondary-actions">
+    <button id="reset-btn">♻️ Nuevo dictado</button>
+
+    <div class="dropdown">
+      <button id="atajo-button">⚙️ Atajos</button>
+      <div id="atajo-form" class="dropdown-content">
+        <strong>➕ Crear nuevo atajo</strong><br>
+        <input type="text" id="atajo-clave" placeholder="Palabra clave">
+        <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
+        <button id="crear-atajo-button">Guardar atajo</button>
+        <hr>
+        <strong>📂 Ver atajos guardados</strong><br>
+        <button id="mostrar-atajos">Mostrar/Ocultar</button>
+        <ul id="atajos-guardados"></ul>
+      </div>
+    </div>
+
+    <div class="dropdown">
+      <button id="historial-button">🗂️ Historial</button>
+      <ul id="historial-list" class="dropdown-content"></ul>
+    </div>
+  </div>
+
+  <!-- Popup informe generado -->
+  <div id="popup">
+    <h3>INFORME GENERADO</h3>
+    <div id="popup-content"></div>
+    <button onclick="cerrarPopup()">Copiar</button>
+    <button onclick="cerrarPopup()">Exportar PDF</button>
+    <button id="popup-close">Cerrar</button>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+```
+
+APP.PY PRE:
+
+import os
+import tempfile
+import subprocess
+from flask import Flask
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import whisper
+
+# Inicializa la aplicación Flask y habilita CORS
+app = Flask(__name__)
+CORS(app)
+
+# Configura SocketIO para WebSockets (usa eventlet por defecto si está instalado)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Carga el modelo Whisper únicamente al iniciar el servidor
+model = whisper.load_model("base")
+
+@socketio.on('audio_chunk')
+def handle_audio_chunk(data):
+    """
+    Recibe trozos de audio del cliente (Uint8Array convertido a bytes)
+    y emite la transcripción parcial de ese fragmento.
+    """
+    # Línea de depuración: muestra en consola que llegó un chunk\ n    print(f"📥 Chunk recibido ({len(data['chunk'])} bytes)")
+    # Convierte la lista de bytes a bytes nativos
+    audio_bytes = bytes(data['chunk'])
+
+    # Procesa el trozo en un directorio temporal
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Guarda el chunk original
+        in_path = os.path.join(tmpdir, 'chunk.webm')
+        with open(in_path, 'wb') as f:
+            f.write(audio_bytes)
+
+        # Convierte a WAV mono a 16 kHz con ffmpeg
+        wav_path = os.path.join(tmpdir, 'chunk.wav')
+        subprocess.run(
+            [
+                "ffmpeg", "-i", in_path,
+                "-ar", "16000", "-ac", "1", wav_path
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+        # Transcribe el fragmento con Whisper
+        result = model.transcribe(wav_path, language="es", fp16=False)
+        text = result.get('text', '').strip()
+
+    # Envía el fragmento transcrito de vuelta al cliente
+    emit('transcription', {'text': text})
+
+if __name__ == '__main__':
+    # Mensaje de arranque para verificar en consola
+    print("🔥 Iniciando servidor WebSocket con Whisper en el puerto 5050…")
+    # Arranca el servidor WebSocket en el puerto 5050
+    socketio.run(app, host='0.0.0.0', port=5050)
+
+APP.PY POST
+
+import os
+import tempfile
+import subprocess
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+import whisper
+import openai  # Nuevo
+
+# Configuración
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app = Flask(__name__)
+CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Carga Whisper
+model = whisper.load_model("base")
+
+# Configura OpenAI
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+@app.route('/informe', methods=['POST'])
+def generar_informe():
+    data = request.get_json()
+    dictado = data.get('dictado', '').strip()
+    if not dictado:
+        return jsonify(error="Dictado vacío"), 400
+
+    # Mensajes para ChatCompletion
+    messages = [
+        {"role": "system", "content": "Eres un radiólogo experto. Genera un informe estructurado de TC de abdomen y pelvis a partir del dictado."},
+        {"role": "user",   "content": dictado}
+    ]
+
+    try:
+        resp = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.2
+        )
+        informe = resp.choices[0].message.content.strip()
+        return jsonify(informe=informe)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    # (mismo código de transcripción con Whisper vía WebSocket)
+    # ...
+    pass  # no modificamos esta parte
+
+@socketio.on('audio_chunk')
+def handle_audio_chunk(data):
+    # (mismo código anterior para streaming y transcripción parcial)
+    # ...
+    pass
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=5050)
+
+
+NUEVO SCRPIT:
+
+// === Socket.IO ===
+const socket = io('http://localhost:5050');
+
+// === DOM ===
+const container        = document.getElementById('plugin-container');
+const dragBar          = document.getElementById('drag-bar');
+const micButton        = document.getElementById('mic-button');
+const transcriptionBox = document.getElementById('transcription');
+const resetBtn         = document.getElementById('reset-btn');
+const generateBtn      = document.getElementById('generate-btn');
+const popup            = document.getElementById('popup');
+const popupContent     = document.getElementById('popup-content');
+const popupClose       = document.getElementById('popup-close');
+let isRecording = false, mediaRecorder;
+
+// — Drag & Drop sólo en dragBar —
+let dragging=false, startX, startY, origX, origY;
+function onStart(x,y){ dragging=true; startX=x; startY=y;
+  const r=container.getBoundingClientRect(); origX=r.left; origY=r.top;
+  document.body.style.userSelect='none'; }
+function onMove(x,y){ if(!dragging) return;
+  container.style.left = origX + (x-startX) + 'px';
+  container.style.top  = origY + (y-startY) + 'px'; }
+function onEnd(){ dragging=false; document.body.style.userSelect=''; }
+dragBar.addEventListener('mousedown', e=>onStart(e.clientX,e.clientY));
+document.addEventListener('mousemove', e=>onMove(e.clientX,e.clientY));
+document.addEventListener('mouseup', onEnd);
+dragBar.addEventListener('touchstart', e=>onStart(e.touches[0].clientX,e.touches[0].clientY));
+document.addEventListener('touchmove', e=>onMove(e.touches[0].clientX,e.touches[0].clientY));
+document.addEventListener('touchend', onEnd);
+
+// — Streaming Whisper —
+socket.on('connect', ()=>console.log('🔗 Socket conectado'));
+socket.on('transcription', ({text})=>{
+  if(text){ transcriptionBox.innerHTML += text+'<br>';
+    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+    sessionStorage.setItem('dictado', transcriptionBox.innerHTML);
+  }
+});
+
+// — Micrófono por segundos —
+micButton.addEventListener('click', async ()=>{
+  if(!isRecording){
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start(5000);
+    mediaRecorder.ondataavailable = e=>{
+      if(e.data.size>0) e.data.arrayBuffer().then(buf=>
+        socket.emit('audio_chunk',{chunk:new Uint8Array(buf)})
+      );
+    };
+    mediaRecorder.onstart = ()=>{ micButton.classList.add('active'); isRecording=true; };
+    mediaRecorder.onstop  = ()=>{ micButton.classList.remove('active'); isRecording=false; };
+  } else mediaRecorder.stop();
+});
+
+// — Nuevo dictado —
+resetBtn.addEventListener('click', ()=>{
+  transcriptionBox.innerHTML=''; sessionStorage.removeItem('dictado');
+});
+
+// — Generar informe —
+generateBtn.addEventListener('click', async ()=>{
+  const dictado = transcriptionBox.textContent.trim();
+  if(!dictado) return alert('Dictado vacío.');
+  // Deshabilita y avisa
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Generando informe…';
+
+  // Aplica atajos locales (si los tienes)
+  const processed = generarInforme(dictado);
+
+  try {
+    const res = await fetch('http://localhost:5050/informe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({dictado:processed})
+    });
+    const data = await res.json();
+    if(data.informe){
+      popupContent.innerHTML = data.informe.replace(/\n/g,'<br>');
+      popup.style.display = 'block';
+      guardarEnHistorial(data.informe);
+    } else {
+      alert('Error: '+(data.error||'Desconocido'));
+    }
+  } catch(e){
+    alert('Error de conexión: '+e.message);
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generar informe';
+  }
+});
+
+// — Popup cierre —
+popupClose.addEventListener('click', ()=>popup.style.display='none');
+
+// — Historial y Atajos (igual que antes) —
+function guardarEnHistorial(texto){
+  const ul = document.getElementById('historial-list');
+  const li = document.createElement('li');
+  li.textContent = `[${new Date().toLocaleString()}] ${texto.slice(0,50)}…`;
+  ul.appendChild(li);
+}
+document.getElementById('historial-button')
+  .addEventListener('click', ()=>{
+    document.getElementById('historial-list')
+      .classList.toggle('show');
+  });
+function generarInforme(txt){
+  let out = txt;
+  Object.keys(localStorage).forEach(k=>{
+    if(k.startsWith('atajo_')){
+      const key = k.replace('atajo_','');
+      out = out.replace(new RegExp(`\\b${key}\\b`,'gi'), localStorage.getItem(k));
+    }
+  });
+  return out;
+}
+// Atajos:
+document.getElementById('atajo-button')
+  .addEventListener('click', ()=>{
+    document.getElementById('atajo-form').classList.toggle('show');
+});
+document.getElementById('crear-atajo-button')
+  .addEventListener('click', ()=>{
+    const c = document.getElementById('atajo-clave').value.trim();
+    const v = document.getElementById('atajo-sustitucion').value.trim();
+    if(c&&v){ localStorage.setItem(`atajo_${c}`,v); alert('Atajo guardado'); mostrarAtajos(); }
+});
+document.getElementById('mostrar-atajos')
+  .addEventListener('click', ()=>{
+    document.getElementById('atajos-guardados')
+      .classList.toggle('show');
+});
+function mostrarAtajos(){
+  const ul = document.getElementById('atajos-guardados');
+  ul.innerHTML = '';
+  Object.keys(localStorage).forEach(k=>{
+    if(k.startsWith('atajo_')){
+      const li = document.createElement('li');
+      li.textContent = `${k.replace('atajo_','')} → ${localStorage.getItem(k)}`;
+      ul.appendChild(li);
+    }
+  });
+}
+mostrarAtajos();
+
+SCRIPT PREVIO:
+
+// === WEBSOCKET / Socket.IO ===
+const socket = io('http://localhost:5050');
+
+// === ELEMENTOS DEL DOM ===
+const container        = document.getElementById('plugin-container');
+const dragBar          = document.getElementById('drag-bar');
+const micButton        = document.getElementById('mic-button');
+const transcriptionBox = document.getElementById('transcription');
+const resetBtn         = document.getElementById('reset-btn');
+let isRecording = false;
+let mediaRecorder;
+
+// === LÓGICA DE DRAG / DROP (ratón + touch) ===
+let dragging = false, startX, startY, origX, origY;
+
+function onDragStart(x, y) {
+  dragging = true;
+  startX = x; startY = y;
+  const rect = container.getBoundingClientRect();
+  origX = rect.left; origY = rect.top;
+  document.body.style.userSelect = 'none';
+}
+function onDragMove(x, y) {
+  if (!dragging) return;
+  const dx = x - startX;
+  const dy = y - startY;
+  container.style.left = origX + dx + 'px';
+  container.style.top  = origY + dy + 'px';
+}
+function onDragEnd() {
+  dragging = false;
+  document.body.style.userSelect = '';
+}
+
+// Mouse
+dragBar.addEventListener('mousedown', e => onDragStart(e.clientX, e.clientY));
+document.addEventListener( 'mousemove', e => onDragMove( e.clientX,  e.clientY));
+document.addEventListener(   'mouseup',   onDragEnd);
+
+// Touch
+dragBar.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  onDragStart(t.clientX, t.clientY);
+});
+document.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  onDragMove(t.clientX, t.clientY);
+});
+document.addEventListener('touchend', onDragEnd);
+
+// === SOCKET.IO EVENTS ===
+socket.on('connect', () => console.log('🔗 Socket conectado'));
+socket.on('transcription', ({ text }) => {
+  console.log('📤 Fragmento transcrito:', text);
+  if (text) {
+    transcriptionBox.innerHTML += text + '<br>';
+    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+    sessionStorage.setItem('dictado', transcriptionBox.innerHTML);
+  }
+});
+
+// === CONTROL DEL MICRÓFONO ===
+micButton.addEventListener('click', async () => {
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.start(5000); // 5 s chunks
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+          e.data.arrayBuffer().then(buf => {
+            socket.emit('audio_chunk', { chunk: new Uint8Array(buf) });
+          });
+        }
+      };
+
+      mediaRecorder.onstart = () => {
+        micButton.classList.add('active');
+        console.log('🎤 Inicio streaming audio');
+        isRecording = true;
+      };
+      mediaRecorder.onstop = () => {
+        micButton.classList.remove('active');
+        console.log('🎤 Fin streaming audio');
+        isRecording = false;
+      };
+    } catch (err) {
+      alert('Error accediendo al micrófono: ' + err.message);
+    }
+  } else {
+    mediaRecorder.stop();
+  }
+});
+
+// === RESET (Nuevo dictado) ===
+resetBtn.addEventListener('click', () => {
+  transcriptionBox.innerHTML = '';
+  sessionStorage.removeItem('dictado');
+});
+
+// === DOMContentLoaded: informe, historial, atajos ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Restaurar dictado previo
+  const prev = sessionStorage.getItem('dictado');
+  if (prev) transcriptionBox.innerHTML = prev;
+
+  // Generar informe + popup
+  const generateBtn  = document.getElementById('generate-btn');
+  const popup        = document.getElementById('popup');
+  const popupClose   = document.getElementById('popup-close');
+  const popupContent = document.getElementById('popup-content');
+
+  generateBtn.addEventListener('click', () => {
+    const dictado = transcriptionBox.textContent.trim();
+    if (!dictado) return alert('Dictado vacío.');
+    const informe = generarInforme(dictado);
+    popupContent.innerHTML = informe.replace(/\n/g, '<br>');
+    popup.style.display = 'block';
+    guardarEnHistorial(informe);
+  });
+  popupClose.addEventListener('click', () => popup.style.display = 'none');
+
+  // Historial
+  const historialBtn  = document.getElementById('historial-button');
+  const historialList = document.getElementById('historial-list');
+  historialBtn.addEventListener('click', () => historialList.classList.toggle('show'));
+  function guardarEnHistorial(texto) {
+    const li = document.createElement('li');
+    li.textContent = `[${new Date().toLocaleString()}] ${texto.slice(0,50)}…`;
+    historialList.appendChild(li);
+  }
+
+  // Atajos personalizados
+  const atajoBtn         = document.getElementById('atajo-button');
+  const atajoForm        = document.getElementById('atajo-form');
+  const crearAtajoBtn    = document.getElementById('crear-atajo-button');
+  const mostrarAtajosBtn = document.getElementById('mostrar-atajos');
+
+  atajoBtn.addEventListener('click', () => atajoForm.classList.toggle('show'));
+  crearAtajoBtn.addEventListener('click', () => {
+    const clave = document.getElementById('atajo-clave').value.trim();
+    const valor = document.getElementById('atajo-sustitucion').value.trim();
+    if (clave && valor) {
+      localStorage.setItem(`atajo_${clave}`, valor);
+      alert('Atajo guardado');
+      mostrarAtajos();
+    }
+  });
+  mostrarAtajosBtn.addEventListener('click', () =>
+    document.getElementById('atajos-guardados').classList.toggle('show')
+  );
+
+  function mostrarAtajos() {
+    const ul = document.getElementById('atajos-guardados');
+    ul.innerHTML = '';
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('atajo_')) {
+        const li = document.createElement('li');
+        li.textContent = `${key.replace('atajo_','')} → ${localStorage.getItem(key)}`;
+        ul.appendChild(li);
+      }
+    });
+  }
+  mostrarAtajos();
+});
+
+// === FUNCIONES AUXILIARES ===
+function generarInforme(texto) {
+  let out = texto;
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('atajo_')) {
+      const k = key.replace('atajo_','');
+      out = out.replace(new RegExp(`\\b${k}\\b`, 'gi'), localStorage.getItem(key));
+    }
+  });
+  return out;
+}
+
+function cerrarPopup() {
+  document.getElementById('popup').style.display = 'none';
+}
+
+RESULTADO:  
+✅ El botón "Generar informe" se conecta correctamente al backend.  
+✅ Se muestra un mensaje de espera mientras se genera el informe.  
+✅ El informe recibido desde OpenAI se muestra correctamente en el popup.  
+✅ El informe se guarda automáticamente en el historial.  
+✅ Errores de red o de formato se notifican con alertas claras.  
+⏳ Pendiente: Validar estructura del backend y asegurar persistencia de sesión si se quiere conservar historial entre sesiones o usuarios.

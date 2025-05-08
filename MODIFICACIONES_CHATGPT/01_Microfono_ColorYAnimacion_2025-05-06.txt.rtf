@@ -1,0 +1,1163 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww21620\viewh16180\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 T\'cdTULO DEL CAMBIO: Micr\'f3fono \'96 Color y animaci\'f3n de grabaci\'f3n  \
+FECHA: 2025-05-06\
+\
+DESCRIPCI\'d3N DEL CAMBIO:  \
+Se quiere que el bot\'f3n del micr\'f3fono refleje visualmente el estado de grabaci\'f3n.  \
+Los objetivos son:\
+- Cambiar de gris a rojo al iniciar grabaci\'f3n.\
+- A\'f1adir animaci\'f3n de parpadeo mientras graba.\
+- Asegurar que la grabaci\'f3n se activa correctamente.\
+- Confirmar que la transcripci\'f3n aparece en el cuadro `contenteditable`.\
+\
+ARCHIVOS MODIFICADOS:  \
+- frontend.js  \
+- index.html  \
+- style.css (si se usaron clases nuevas)\
+\
+--------------------------------------------------\
+ARCHIVO: frontend.js o script:\
+\
+>> ANTES DEL CAMBIO:\
+\
+// === VARIABLES ===\
+let mediaRecorder;\
+let audioChunks = [];\
+const micButton = document.getElementById('mic-button');\
+const transcriptionBox = document.getElementById('transcription');\
+let isRecording = false;\
+\
+// === MANEJO DE MICROFONO ===\
+micButton.addEventListener('click', async () => \{\
+    if (!isRecording) \{\
+        startRecording();\
+    \} else \{\
+        stopRecording();\
+    \}\
+\});\
+\
+// === INICIAR GRABACI\'d3N ===\
+async function startRecording() \{\
+    try \{\
+        const stream = await navigator.mediaDevices.getUserMedia(\{ audio: true \});\
+        mediaRecorder = new MediaRecorder(stream);\
+        audioChunks = [];\
+        mediaRecorder.ondataavailable = event => \{\
+            if (event.data.size > 0) \{\
+                audioChunks.push(event.data);\
+            \}\
+        \};\
+        mediaRecorder.onstop = sendAudioToServer;\
+\
+        mediaRecorder.start();\
+        micButton.classList.add('active');\
+        isRecording = true;\
+    \} catch (err) \{\
+        alert('Error accediendo al micr\'f3fono: ' + err.message);\
+    \}\
+\}\
+\
+// === DETENER GRABACI\'d3N ===\
+function stopRecording() \{\
+    if (mediaRecorder && isRecording) \{\
+        mediaRecorder.stop();\
+        micButton.classList.remove('active');\
+        isRecording = false;\
+    \}\
+\}\
+\
+// === ENVIAR AUDIO A BACKEND ===\
+async function sendAudioToServer() \{\
+    const blob = new Blob(audioChunks, \{ type: 'audio/webm' \});\
+    const formData = new FormData();\
+    formData.append('audio', blob, 'grabacion.webm');\
+\
+    try \{\
+        const response = await fetch('http://localhost:5050/transcribe', \{\
+            method: 'POST',\
+            body: formData\
+        \});\
+\
+        const data = await response.json();\
+        if (data.transcripcion) \{\
+            transcriptionBox.textContent += ' ' + data.transcripcion.trim();\
+            sessionStorage.setItem('dictado', transcriptionBox.textContent);\
+        \} else \{\
+            alert('Error en transcripci\'f3n: ' + (data.error || 'Desconocido'));\
+        \}\
+    \} catch (error) \{\
+        alert('Error al conectar con el servidor: ' + error.message);\
+    \}\
+\}\
+\
+// === DOMContentLoaded ===\
+document.addEventListener("DOMContentLoaded", () => \{\
+    const generateBtn = document.getElementById("generate-btn");\
+    const popup = document.getElementById("popup");\
+    const popupContent = document.getElementById("popup-content");\
+    const popupClose = document.getElementById("popup-close");\
+\
+    generateBtn.addEventListener("click", () => \{\
+        const dictado = transcriptionBox.textContent.trim();\
+        if (!dictado) \{\
+            alert("Dictado vac\'edo.");\
+            return;\
+        \}\
+\
+        const informe = generarInforme(dictado);\
+        mostrarPopup(informe);\
+        guardarEnHistorial(informe);\
+    \});\
+\
+    popupClose.addEventListener("click", () => \{\
+        popup.style.display = "none";\
+    \});\
+\
+// === HISTORIAL ===\
+const historialBtn = document.getElementById("historial-button");\
+const historialList = document.getElementById("historial-list");\
+\
+historialBtn.addEventListener("click", () => \{\
+    historialList.classList.toggle("show");\
+\});\
+\
+function guardarEnHistorial(texto) \{\
+    const fecha = new Date().toLocaleString();\
+    const item = document.createElement("li");\
+    item.textContent = `[$\{fecha\}] $\{texto.substring(0, 50)\}...`;\
+    historialList.appendChild(item);\
+\}\
+\
+// === ATAJOS ===\
+const atajoBtn = document.getElementById("atajo-button");\
+const atajoForm = document.getElementById("atajo-form");\
+const atajoInput = document.getElementById("atajo-clave");\
+const sustitucionInput = document.getElementById("atajo-sustitucion");\
+const crearAtajoBtn = document.getElementById("crear-atajo-button");\
+const atajosGuardadosList = document.getElementById("atajos-guardados");\
+const mostrarAtajosBtn = document.getElementById("mostrar-atajos");\
+\
+atajoBtn.addEventListener("click", () => \{\
+    atajoForm.classList.toggle("show");\
+\});\
+\
+crearAtajoBtn.addEventListener("click", () => \{\
+    const clave = atajoInput.value.trim();\
+    const valor = sustitucionInput.value.trim();\
+    if (clave && valor) \{\
+        localStorage.setItem(`atajo_$\{clave\}`, valor);\
+        atajoInput.value = "";\
+        sustitucionInput.value = "";\
+        alert("Atajo guardado");\
+        mostrarAtajos();\
+    \}\
+\});\
+\
+mostrarAtajosBtn.addEventListener("click", () => \{\
+    atajosGuardadosList.classList.toggle("show");\
+\});\
+\
+function mostrarAtajos() \{\
+    atajosGuardadosList.innerHTML = "";\
+    Object.keys(localStorage).forEach(key => \{\
+        if (key.startsWith("atajo_")) \{\
+            const valor = localStorage.getItem(key);\
+            const item = document.createElement("li");\
+            item.textContent = `$\{key.replace("atajo_", "")\} \uc0\u8594  $\{valor\}`;\
+            atajosGuardadosList.appendChild(item);\
+        \}\
+    \});\
+\}\
+\
+    mostrarAtajos();\
+\});\
+\
+function generarInforme(texto) \{\
+    let procesado = texto;\
+    Object.keys(localStorage).forEach(key => \{\
+        if (key.startsWith("atajo_")) \{\
+            const clave = key.replace("atajo_", "");\
+            const valor = localStorage.getItem(key);\
+            const regex = new RegExp(`\\\\b$\{clave\}\\\\b`, "gi");\
+            procesado = procesado.replace(regex, valor);\
+        \}\
+    \});\
+    return procesado;\
+\}\
+\
+function mostrarPopup(texto) \{\
+    const popup = document.getElementById("popup");\
+    const popupContent = document.getElementById("popup-content");\
+    popupContent.textContent = texto;\
+    popup.style.display = "block";\
+\}\
+\
+function guardarEnHistorial(texto) \{\
+    const historialList = document.getElementById("historial-list");\
+    const fecha = new Date().toLocaleString();\
+    const item = document.createElement("li");\
+    item.textContent = `[$\{fecha\}] ` + texto.substring(0, 50) + "...";\
+    historialList.appendChild(item);\
+\}\
+// === HACER PLUGIN ARRASTRABLE ===\
+const pluginContainer = document.getElementById("plugin-container");\
+const dragBar = document.getElementById("drag-bar");\
+let isDragging = false;\
+let offsetX = 0;\
+let offsetY = 0;\
+\
+dragBar.addEventListener("mousedown", (e) => \{\
+    isDragging = true;\
+    offsetX = e.clientX - pluginContainer.getBoundingClientRect().left;\
+    offsetY = e.clientY - pluginContainer.getBoundingClientRect().top;\
+\});\
+\
+document.addEventListener("mousemove", (e) => \{\
+    if (isDragging) \{\
+        pluginContainer.style.left = `$\{e.clientX - offsetX\}px`;\
+        pluginContainer.style.top = `$\{e.clientY - offsetY\}px`;\
+    \}\
+\});\
+\
+document.addEventListener("mouseup", () => \{\
+    isDragging = false;\
+\});\
+\
+\
+>> DESPU\'c9S DEL CAMBIO:\
+// script.js\
+// === VARIABLES ===\
+let mediaRecorder;\
+let audioChunks = [];\
+const micButton = document.getElementById('mic-button');\
+const transcriptionBox = document.getElementById('transcription');\
+let isRecording = false;\
+\
+// A\'f1adimos logging para verificar estados\
+// === MANEJO DE MICROFONO ===\
+micButton.addEventListener('click', async () => \{\
+    if (!isRecording) \{\
+        startRecording();\
+    \} else \{\
+        stopRecording();\
+    \}\
+\});\
+\
+// === INICIAR GRABACI\'d3N ===\
+async function startRecording() \{\
+    try \{\
+        const stream = await navigator.mediaDevices.getUserMedia(\{ audio: true \});\
+        mediaRecorder = new MediaRecorder(stream);\
+        audioChunks = [];\
+\
+        mediaRecorder.onstart = () => console.log('\uc0\u55356 \u57252  Grabaci\'f3n iniciada');\
+        mediaRecorder.ondataavailable = event => \{\
+            if (event.data.size > 0) \{\
+                audioChunks.push(event.data);\
+            \}\
+        \};\
+        mediaRecorder.onstop = () => \{\
+            console.log('\uc0\u55356 \u57252  Grabaci\'f3n detenida');\
+            sendAudioToServer();\
+        \};\
+\
+        mediaRecorder.start();\
+        micButton.classList.add('active');\
+        isRecording = true;\
+    \} catch (err) \{\
+        alert('Error accediendo al micr\'f3fono: ' + err.message);\
+    \}\
+\}\
+\
+// === DETENER GRABACI\'d3N ===\
+function stopRecording() \{\
+    if (mediaRecorder && isRecording) \{\
+        mediaRecorder.stop();\
+        micButton.classList.remove('active');\
+        isRecording = false;\
+    \}\
+\}\
+\
+// === ENVIAR AUDIO A BACKEND ===\
+async function sendAudioToServer() \{\
+    const blob = new Blob(audioChunks, \{ type: 'audio/webm' \});\
+    const formData = new FormData();\
+    formData.append('audio', blob, 'grabacion.webm');\
+\
+    try \{\
+        const response = await fetch('http://localhost:5050/transcribe', \{\
+            method: 'POST',\
+            body: formData\
+        \});\
+\
+        const data = await response.json();\
+        if (data.transcripcion) \{\
+            // Procesar saltos de l\'ednea y volcar con innerHTML\
+            const texto = data.transcripcion.trim();\
+            const htmlSeguro = texto.replace(/\\n/g, '<br>');\
+            const sep = transcriptionBox.innerHTML ? ' ' : '';\
+            transcriptionBox.innerHTML += sep + htmlSeguro;\
+            sessionStorage.setItem('dictado', transcriptionBox.innerHTML);\
+        \} else \{\
+            alert('Error en transcripci\'f3n: ' + (data.error || 'Desconocido'));\
+        \}\
+    \} catch (error) \{\
+        alert('Error al conectar con el servidor: ' + error.message);\
+    \}\
+\}\
+\
+// === DOMContentLoaded ===\
+document.addEventListener("DOMContentLoaded", () => \{\
+    const generateBtn = document.getElementById("generate-btn");\
+    const popup = document.getElementById("popup");\
+    const popupContent = document.getElementById("popup-content");\
+    const popupClose = document.getElementById("popup-close");\
+\
+    generateBtn.addEventListener("click", () => \{\
+        const dictado = transcriptionBox.textContent.trim();\
+        if (!dictado) \{\
+            alert("Dictado vac\'edo.");\
+            return;\
+        \}\
+\
+        const informe = generarInforme(dictado);\
+        mostrarPopup(informe);\
+        guardarEnHistorial(informe);\
+    \});\
+\
+    popupClose.addEventListener("click", () => \{\
+        popup.style.display = "none";\
+    \});\
+\
+    // === HISTORIAL ===\
+    const historialBtn = document.getElementById("historial-button");\
+    const historialList = document.getElementById("historial-list");\
+\
+    historialBtn.addEventListener("click", () => \{\
+        historialList.classList.toggle("show");\
+    \});\
+\
+    function guardarEnHistorial(texto) \{\
+        const fecha = new Date().toLocaleString();\
+        const item = document.createElement("li");\
+        item.textContent = `[$\{fecha\}] $\{texto.substring(0, 50)\}...`;\
+        historialList.appendChild(item);\
+    \}\
+\
+    // === ATAJOS ===\
+    const atajoBtn = document.getElementById("atajo-button");\
+    const atajoForm = document.getElementById("atajo-form");\
+    const atajoInput = document.getElementById("atajo-clave");\
+    const sustitucionInput = document.getElementById("atajo-sustitucion");\
+    const crearAtajoBtn = document.getElementById("crear-atajo-button");\
+    const atajosGuardadosList = document.getElementById("atajos-guardados");\
+    const mostrarAtajosBtn = document.getElementById("mostrar-atajos");\
+\
+    atajoBtn.addEventListener("click", () => \{\
+        atajoForm.classList.toggle("show");\
+    \});\
+\
+    crearAtajoBtn.addEventListener("click", () => \{\
+        const clave = atajoInput.value.trim();\
+        const valor = sustitucionInput.value.trim();\
+        if (clave && valor) \{\
+            localStorage.setItem(`atajo_$\{clave\}`, valor);\
+            atajoInput.value = "";\
+            sustitucionInput.value = "";\
+            alert("Atajo guardado");\
+            mostrarAtajos();\
+        \}\
+    \});\
+\
+    mostrarAtajosBtn.addEventListener("click", () => \{\
+        atajosGuardadosList.classList.toggle("show");\
+    \});\
+\
+    function mostrarAtajos() \{\
+        atajosGuardadosList.innerHTML = "";\
+        Object.keys(localStorage).forEach(key => \{\
+            if (key.startsWith("atajo_")) \{\
+                const valor = localStorage.getItem(key);\
+                const item = document.createElement("li");\
+                item.textContent = `$\{key.replace("atajo_", "")\} \uc0\u8594  $\{valor\}`;\
+                atajosGuardadosList.appendChild(item);\
+            \}\
+        \});\
+    \}\
+\
+    mostrarAtajos();\
+\});\
+\
+// === Funciones auxiliares ===\
+function generarInforme(texto) \{\
+    let procesado = texto;\
+    Object.keys(localStorage).forEach(key => \{\
+        if (key.startsWith("atajo_")) \{\
+            const clave = key.replace("atajo_", "");\
+            const valor = localStorage.getItem(key);\
+            const regex = new RegExp(`\\\\b$\{clave\}\\\\b`, "gi");\
+            procesado = procesado.replace(regex, valor);\
+        \}\
+    \});\
+    return procesado;\
+\}\
+\
+function mostrarPopup(texto) \{\
+    const popup = document.getElementById("popup");\
+    const popupContent = document.getElementById("popup-content");\
+    popupContent.innerHTML = texto.replace(/\\n/g, '<br>');\
+    popup.style.display = "block";\
+\}\
+\
+function cerrarPopup() \{\
+    document.getElementById("popup").style.display = "none";\
+\}\
+\
+\
+--------------------------------------------------\
+ARCHIVO: index.html\
+\
+>> ANTES DEL CAMBIO:\
+\
+\
+<!DOCTYPE html>\
+<html lang="es">\
+<head>\
+    <meta charset="UTF-8">\
+    <title>Dictado Informes TC</title>\
+    <link rel="stylesheet" href="style.css">\
+</head>\
+<body>\
+\
+<!-- Plugin flotante -->\
+<div id="plugin-container">\
+    <div id="drag-bar">\uc0\u55357 \u57328  Mover</div> <!-- Zona superior para arrastrar -->\
+\
+    <!-- Cuadro de transcripci\'f3n -->\
+    <div id="transcription" class="dictated-text" contenteditable="true"></div>\
+\
+    <!-- Micr\'f3fono centrado con SVG -->\
+    <div class="center-controls">\
+        <button id="mic-button" aria-label="Micr\'f3fono">\
+            <svg xmlns="http://www.w3.org/2000/svg" height="28" width="28" viewBox="0 0 24 24" fill="currentColor">\
+                <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19.93V22h2v-2.07a8.001 8.001 0 0 0 6.93-6.93H18a6 6 0 0 1-12 0H4.07A8.001 8.001 0 0 0 11 19.93z"/>\
+            </svg>\
+        </button>\
+    </div>\
+\
+  <!-- Bot\'f3n principal -->\
+<div class="main-action">\
+    <button id="generate-btn" onclick="mostrarPopup()">Generar informe</button>\
+</div>\
+\
+<!-- Barra secundaria -->\
+<div class="secondary-actions">\
+    <button id="reset-btn">\uc0\u9851 \u65039  Nuevo dictado</button>\
+\
+    <div class="dropdown">\
+        <button id="atajo-button">\uc0\u9881 \u65039  Atajos personalizados</button>\
+        <div id="atajo-form" class="dropdown-content">\
+            <strong>\uc0\u10133  Crear nuevo atajo</strong><br>\
+            <input type="text" id="atajo-clave" placeholder="Palabra clave">\
+            <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">\
+            <button id="crear-atajo-button">Guardar atajo</button>\
+            <hr>\
+            <strong>\uc0\u55357 \u56514  Ver atajos guardados</strong>\
+            <button id="mostrar-atajos">Mostrar/Ocultar</button>\
+            <ul id="atajos-guardados"></ul>\
+        </div>\
+    </div>\
+\
+    <div class="dropdown">\
+        <button id="historial-button">\uc0\u55357 \u56770 \u65039  Historial</button>\
+        <ul id="historial-list"></ul>\
+    </div>\
+</div>\
+\
+<!-- Pop-up informe generado -->\
+<div id="popup">\
+    <h3>INFORME GENERADO</h3>\
+    <p id="informe-generado">\
+        TC DE ABDOMEN Y PELVIS CON CONTRASTE EV:<br><br>\
+        H\'edgado de tama\'f1o y morfolog\'eda normales. No se identifican lesiones focales hep\'e1ticas. No hay dilataci\'f3n de v\'edas biliares...\
+    </p>\
+    <button id="popup-close">Cerrar</button>\
+</div>\
+\
+\
+<!-- Pop-up informe generado -->\
+<div id="popup">\
+    <h3>INFORME GENERADO</h3>\
+    <p id="informe-generado">\
+    TC DE ABDOMEN Y PELVIS CON CONTRASTE EV:<br><br>\
+    H\'edgado de tama\'f1o y morfolog\'eda normales. No se identifican lesiones focales hep\'e1ticas. No hay dilataci\'f3n de v\'edas biliares...\
+    </p>\
+    <button onclick="cerrarPopup()">Copiar</button>\
+    <button onclick="cerrarPopup()">Exportar PDF</button>\
+    <button onclick="cerrarPopup()">Cerrar</button>\
+</div>\
+\
+<script src="script.js"></script>\
+</body>\
+</html>\
+\
+\
+>> DESPU\'c9S DEL CAMBIO:\
+<!-- index.html -->\
+<!DOCTYPE html>\
+<html lang="es">\
+<head>\
+    <meta charset="UTF-8">\
+    <title>Dictado Informes TC</title>\
+    <link rel="stylesheet" href="style.css">\
+</head>\
+<body>\
+\
+<!-- Plugin flotante -->\
+<div id="plugin-container">\
+    <div id="drag-bar">\uc0\u55357 \u57328  Mover</div>\
+\
+    <!-- Cuadro de transcripci\'f3n -->\
+    <div id="transcription" class="dictated-text" contenteditable="true"></div>\
+\
+    <!-- Micr\'f3fono centrado con SVG -->\
+    <div class="center-controls">\
+        <button id="mic-button" aria-label="Micr\'f3fono">\
+            <svg xmlns="http://www.w3.org/2000/svg" height="28" width="28" viewBox="0 0 24 24" fill="currentColor">\
+                <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19.93V22h2v-2.07a8.001 8.001 0 0 0 6.93-6.93H18a6 6 0 0 1-12 0H4.07A8.001 8.001 0 0 0 11 19.93z"/>\
+            </svg>\
+        </button>\
+    </div>\
+\
+    <!-- Bot\'f3n principal -->\
+    <div class="main-action">\
+        <button id="generate-btn" onclick="mostrarPopup()">Generar informe</button>\
+    </div>\
+\
+    <!-- Barra secundaria -->\
+    <div class="secondary-actions">\
+        <button id="reset-btn">\uc0\u9851 \u65039  Nuevo dictado</button>\
+\
+        <div class="dropdown">\
+            <button id="atajo-button">\uc0\u9881 \u65039  Atajos personalizados</button>\
+            <div id="atajo-form" class="dropdown-content">\
+                <strong>\uc0\u10133  Crear nuevo atajo</strong><br>\
+                <input type="text" id="atajo-clave" placeholder="Palabra clave">\
+                <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">\
+                <button id="crear-atajo-button">Guardar atajo</button>\
+                <hr>\
+                <strong>\uc0\u55357 \u56514  Ver atajos guardados</strong>\
+                <button id="mostrar-atajos">Mostrar/Ocultar</button>\
+                <ul id="atajos-guardados"></ul>\
+            </div>\
+        </div>\
+\
+        <div class="dropdown">\
+            <button id="historial-button">\uc0\u55357 \u56770 \u65039  Historial</button>\
+            <ul id="historial-list"></ul>\
+        </div>\
+    </div>\
+\
+    <!-- Pop-up informe generado -->\
+    <div id="popup">\
+        <h3>INFORME GENERADO</h3>\
+        <div id="popup-content"></div>\
+        <button onclick="cerrarPopup()">Copiar</button>\
+        <button onclick="cerrarPopup()">Exportar PDF</button>\
+        <button id="popup-close">Cerrar</button>\
+    </div>\
+</div>\
+\
+<script src="script.js"></script>\
+</body>\
+</html>\
+\
+\
+--------------------------------------------------\
+ARCHIVO: style.css (opcional)\
+\
+>> ANTES DEL CAMBIO:\
+\
+/* === REGLAS GENERALES === */\
+body \{\
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\
+    background-color: #f4f6f8;\
+    margin: 0;\
+    padding: 20px;\
+    color: #333;\
+\}\
+\
+textarea, [contenteditable="true"] \{\
+    width: 100%;\
+    min-height: 150px;\
+    font-size: 16px;\
+    padding: 12px;\
+    border: 1px solid #ccc;\
+    border-radius: 6px;\
+    resize: vertical;\
+    background-color: #fff;\
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);\
+\}\
+\
+/* === BOT\'d3N MICR\'d3FONO === */\
+#mic-button \{\
+    width: 64px;\
+    height: 64px;\
+    border-radius: 50%;\
+    background-color: #ccc;\
+    border: none;\
+    font-size: 24px;\
+    color: white;\
+    cursor: pointer;\
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);\
+    transition: background-color 0.3s ease;\
+    display: flex;\
+    align-items: center;\
+    justify-content: center;\
+    margin: 0 auto;\
+    margin-top: 20px;\
+\}\
+\
+#mic-button.active \{\
+    background-color: red;\
+    animation: pulse 1.2s infinite;\
+\}\
+\
+@keyframes pulse \{\
+    0% \{\
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.5);\
+    \}\
+    70% \{\
+        box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);\
+    \}\
+    100% \{\
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);\
+    \}\
+\}\
+#plugin-container \{\
+    position: absolute; /* permite arrastrar */\
+    top: 40px;\
+    left: 50%;\
+    transform: translateX(-50%);\
+    background: white;\
+    border-radius: 20px;\
+    padding: 20px;\
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);\
+    z-index: 9999;\
+    width: 500px;\
+    max-width: 90vw;\
+    transition: all 0.3s ease;\
+    cursor: move; /* icono de mover */\
+\}\
+\
+/* === BOT\'d3N GENERAR INFORME === */\
+#generate-btn \{\
+    background-color: #007bff;\
+    color: white;\
+    padding: 14px 32px;\
+    font-size: 16px;\
+    border: none;\
+    border-radius: 6px;\
+    cursor: pointer;\
+    margin: 30px auto 20px auto;\
+    display: block;\
+    transition: background-color 0.3s ease, transform 0.2s ease;\
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);\
+\}\
+\
+#generate-btn:hover \{\
+    background-color: #0056b3;\
+    transform: scale(1.03);\
+\}\
+\
+/* === CONTROLES SECUNDARIOS === */\
+.secondary-actions \{\
+    display: flex;\
+    justify-content: space-between;\
+    margin-top: 20px;\
+    flex-wrap: wrap;\
+    gap: 10px;\
+\}\
+\
+.secondary-actions button \{\
+    background-color: #f5f5f5;\
+    color: #555;\
+    border: 1px solid #ccc;\
+    padding: 6px 12px;\
+    font-size: 13px;\
+    border-radius: 4px;\
+    cursor: pointer;\
+    transition: background-color 0.2s;\
+\}\
+\
+.secondary-actions button:hover \{\
+    background-color: #e2e2e2;\
+\}\
+\
+/* === HISTORIAL Y ATAJOS === */\
+#historial-list,\
+#atajos-guardados \{\
+    display: none;\
+    margin-top: 10px;\
+    max-height: 200px;\
+    overflow-y: auto;\
+    background-color: #fafafa;\
+    border: 1px solid #ddd;\
+    padding: 10px;\
+    border-radius: 5px;\
+    font-size: 13px;\
+\}\
+\
+#historial-list.show,\
+#atajos-guardados.show \{\
+    display: block;\
+\}\
+\
+/* === FORMULARIO ATAJO === */\
+#atajo-form \{\
+    display: none;\
+    margin-top: 10px;\
+\}\
+\
+#atajo-form.show \{\
+    display: block;\
+\}\
+\
+#atajo-form input \{\
+    margin-right: 5px;\
+    padding: 6px;\
+    font-size: 13px;\
+    border: 1px solid #ccc;\
+    border-radius: 4px;\
+\}\
+\
+/* === POPUP INFORME === */\
+#popup \{\
+    display: none;\
+    position: fixed;\
+    top: 10%;\
+    left: 50%;\
+    transform: translateX(-50%);\
+    width: 80%;\
+    max-width: 800px;\
+    background-color: white;\
+    padding: 30px;\
+    border: 1px solid #ccc;\
+    border-radius: 12px;\
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);\
+    z-index: 1000;\
+\}\
+\
+#popup-content \{\
+    white-space: pre-wrap;\
+    margin-bottom: 20px;\
+\}\
+\
+#popup-close \{\
+    background-color: #f44336;\
+    color: white;\
+    border: none;\
+    padding: 10px 20px;\
+    font-size: 13px;\
+    border-radius: 5px;\
+    cursor: pointer;\
+    float: right;\
+\}\
+\
+#popup-close:hover \{\
+    background-color: #c0392b;\
+\}\
+\
+/* === TRANSCRIPCI\'d3N === */\
+#transcription \{\
+    min-height: 200px;\
+    background-color: #ffffff;\
+    padding: 12px;\
+    border: 1px solid #ccc;\
+    border-radius: 6px;\
+    font-size: 16px;\
+    margin-top: 20px;\
+    white-space: pre-wrap;\
+    overflow-y: auto;\
+\}\
+\
+/* === TITULOS === */\
+h1, h2 \{\
+    text-align: center;\
+    color: #222;\
+\}\
+\
+/* === PARA TABLET/IPAD === */\
+@media (max-width: 768px) \{\
+    #popup \{\
+        width: 95%;\
+        padding: 20px;\
+    \}\
+\
+    .secondary-actions \{\
+        flex-direction: column;\
+        align-items: center;\
+        gap: 8px;\
+    \}\
+\
+    #generate-btn \{\
+        width: 90%;\
+    \}\
+\}\
+#drag-bar \{\
+    height: 20px;\
+    cursor: move;\
+    background: transparent;\
+    margin-bottom: 10px;\
+    user-select: none;\
+\}\
+#plugin-container \{\
+    position: absolute;\
+    top: 40px;\
+    left: 50%;\
+    transform: translateX(-50%);\
+    background: white;\
+    border-radius: 20px;\
+    padding: 20px;\
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);\
+    z-index: 9999;\
+    width: 500px;\
+    max-width: 90vw;\
+    transition: all 0.3s ease;\
+\}\
+\
+#drag-bar \{\
+    height: 30px;\
+    cursor: move;\
+    background-color: #f0f0f0;\
+    border-radius: 8px 8px 0 0;\
+    padding: 5px 10px;\
+    font-size: 13px;\
+    color: #666;\
+    user-select: none;\
+\}\
+\
+\
+>> DESPU\'c9S DEL CAMBIO:\
+/* style.css */\
+\
+/* === REGLAS GENERALES === */\
+body \{\
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\
+    background-color: #f4f6f8;\
+    margin: 0;\
+    padding: 20px;\
+    color: #333;\
+\}\
+\
+textarea,\
+[contenteditable="true"] \{\
+    width: 100%;\
+    min-height: 150px;\
+    font-size: 16px;\
+    padding: 12px;\
+    border: 1px solid #ccc;\
+    border-radius: 6px;\
+    resize: vertical;\
+    background-color: #fff;\
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);\
+\}\
+\
+/* === PLUGIN FLOTANTE === */\
+#plugin-container \{\
+    position: absolute;\
+    top: 40px;\
+    left: 50%;\
+    transform: translateX(-50%);\
+    background: white;\
+    border-radius: 20px;\
+    padding: 20px;\
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);\
+    z-index: 9999;\
+    width: 500px;\
+    max-width: 90vw;\
+    transition: all 0.3s ease;\
+    cursor: move;\
+\}\
+\
+#drag-bar \{\
+    height: 30px;\
+    cursor: move;\
+    background-color: #f0f0f0;\
+    border-radius: 8px 8px 0 0;\
+    padding: 5px 10px;\
+    font-size: 13px;\
+    color: #666;\
+    user-select: none;\
+\}\
+\
+/* === TRANSCRIPCI\'d3N === */\
+#transcription \{\
+    min-height: 200px;\
+    background-color: #ffffff;\
+    padding: 12px;\
+    border: 1px solid #ccc;\
+    border-radius: 6px;\
+    font-size: 16px;\
+    margin-top: 20px;\
+    white-space: pre-wrap;\
+    overflow-y: auto;\
+\}\
+\
+/* === BOT\'d3N MICR\'d3FONO === */\
+#mic-button \{\
+    width: 64px;\
+    height: 64px;\
+    border-radius: 50%;\
+    background-color: #ccc;\
+    border: none;\
+    font-size: 24px;\
+    color: white;\
+    cursor: pointer;\
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);\
+    transition: background-color 0.3s ease;\
+    display: flex;\
+    align-items: center;\
+    justify-content: center;\
+    margin: 20px auto 0 auto;\
+\}\
+\
+#mic-button.active \{\
+    background-color: red;\
+    animation: pulse 1.2s infinite;\
+\}\
+\
+@keyframes pulse \{\
+    0% \{\
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.5);\
+    \}\
+    70% \{\
+        box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);\
+    \}\
+    100% \{\
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);\
+    \}\
+\}\
+\
+/* === BOT\'d3N GENERAR INFORME === */\
+#generate-btn \{\
+    background-color: #007bff;\
+    color: white;\
+    padding: 14px 32px;\
+    font-size: 16px;\
+    border: none;\
+    border-radius: 6px;\
+    cursor: pointer;\
+    margin: 30px auto 20px auto;\
+    display: block;\
+    transition: background-color 0.3s ease, transform 0.2s ease;\
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);\
+\}\
+\
+#generate-btn:hover \{\
+    background-color: #0056b3;\
+    transform: scale(1.03);\
+\}\
+\
+/* === CONTROLES SECUNDARIOS === */\
+.secondary-actions \{\
+    display: flex;\
+    justify-content: space-between;\
+    margin-top: 20px;\
+    flex-wrap: wrap;\
+    gap: 10px;\
+\}\
+\
+.secondary-actions button \{\
+    background-color: #f5f5f5;\
+    color: #555;\
+    border: 1px solid #ccc;\
+    padding: 6px 12px;\
+    font-size: 13px;\
+    border-radius: 4px;\
+    cursor: pointer;\
+    transition: background-color 0.2s;\
+\}\
+\
+.secondary-actions button:hover \{\
+    background-color: #e2e2e2;\
+\}\
+\
+/* === HISTORIAL Y ATAJOS === */\
+#historial-list,\
+#atajos-guardados \{\
+    display: none;\
+    margin-top: 10px;\
+    max-height: 200px;\
+    overflow-y: auto;\
+    background-color: #fafafa;\
+    border: 1px solid #ddd;\
+    padding: 10px;\
+    border-radius: 5px;\
+    font-size: 13px;\
+\}\
+\
+#historial-list.show,\
+#atajos-guardados.show \{\
+    display: block;\
+\}\
+\
+/* === FORMULARIO ATAJO === */\
+#atajo-form \{\
+    display: none;\
+    margin-top: 10px;\
+\}\
+\
+#atajo-form.show \{\
+    display: block;\
+\}\
+\
+#atajo-form input \{\
+    margin-right: 5px;\
+    padding: 6px;\
+    font-size: 13px;\
+    border: 1px solid #ccc;\
+    border-radius: 4px;\
+\}\
+\
+/* === POPUP INFORME === */\
+#popup \{\
+    display: none;\
+    position: fixed;\
+    top: 10%;\
+    left: 50%;\
+    transform: translateX(-50%);\
+    width: 80%;\
+    max-width: 800px;\
+    background-color: white;\
+    padding: 30px;\
+    border: 1px solid #ccc;\
+    border-radius: 12px;\
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);\
+    z-index: 1000;\
+\}\
+\
+#popup-content \{\
+    white-space: pre-wrap;\
+    margin-bottom: 20px;\
+\}\
+\
+#popup-close \{\
+    background-color: #f44336;\
+    color: white;\
+    border: none;\
+    padding: 10px 20px;\
+    font-size: 13px;\
+    border-radius: 5px;\
+    cursor: pointer;\
+    float: right;\
+\}\
+\
+#popup-close:hover \{\
+    background-color: #c0392b;\
+\}\
+\
+/* === T\'cdTULOS === */\
+h1,\
+h2 \{\
+    text-align: center;\
+    color: #222;\
+\}\
+\
+/* === PARA TABLET/IPAD === */\
+@media (max-width: 768px) \{\
+    #popup \{\
+        width: 95%;\
+        padding: 20px;\
+    \}\
+\
+    .secondary-actions \{\
+        flex-direction: column;\
+        align-items: center;\
+        gap: 8px;\
+    \}\
+\
+    #generate-btn \{\
+        width: 90%;\
+    \}\
+\}\
+\
+\
+
+
+APP.PY BUENO:
+
+import os
+import tempfile
+import subprocess
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+import whisper
+
+# Configuración
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'webm', 'wav', 'mp3', 'm4a'}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app = Flask(__name__)
+CORS(app)  # <— habilita CORS para todas las rutas
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Carga el modelo Whisper una sola vez
+model = whisper.load_model("base")  # o "small", "medium", "large"
+
+def allowed_file(filename):
+    return (
+        '.' in filename and 
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
+
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    if 'audio' not in request.files:
+        return jsonify(error="No se recibió archivo de audio"), 400
+
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify(error="Nombre de archivo vacío"), 400
+    if not allowed_file(file.filename):
+        return jsonify(error="Formato de archivo no permitido"), 400
+
+    filename = secure_filename(file.filename)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        in_path = os.path.join(tmpdir, filename)
+        file.save(in_path)
+
+        # Convertir a WAV 16 kHz mono
+        wav_path = os.path.join(tmpdir, 'audio.wav')
+        try:
+            subprocess.run([
+                "ffmpeg", "-i", in_path,
+                "-ar", "16000", "-ac", "1", wav_path
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            return jsonify(error="Error al convertir audio con ffmpeg"), 500
+
+        # Transcribe con Whisper
+        try:
+            result = model.transcribe(wav_path, language="es", fp16=False)
+            text = result.get('text', '').strip()
+        except Exception as e:
+            return jsonify(error=f"Error en transcripción: {e}"), 500
+
+    return jsonify(transcripcion=text)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5050)
+--------------------------------------------------\
+\
+RESULTADO:\
+[Describe si el cambio funcion\'f3 correctamente, si falta algo o si se detectaron nuevos errores]\
+}
