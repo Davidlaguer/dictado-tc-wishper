@@ -1,4 +1,4 @@
- /* style.css */
+/* style.css */
 /* === RESET Y BOX-SIZING === */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -132,6 +132,9 @@ body {
   border-radius: 6px;
   display: none;
   z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .dropdown-content.show {
   display: block;
@@ -143,12 +146,21 @@ body {
   margin: 0;
   padding: 0;
   list-style: none;
-  max-height: 200px;
+  max-height: 150px;
   overflow-y: auto;
 }
 #historial-list li,
 #atajos-guardados li {
   margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#atajos-guardados li button,
+#historial-list li button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
 /* === POPUP INFORME === */

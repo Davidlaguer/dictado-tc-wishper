@@ -14,16 +14,20 @@ const popup            = document.getElementById('popup');
 const popupContent     = document.getElementById('popup-content');
 const popupClose       = document.getElementById('popup-close');
 
+// Atajos dropdown
+const atajoBtn         = document.getElementById('atajo-button');
+const atajoDropdown    = document.getElementById('atajo-dropdown');
+
 // === Persistence helpers ===
 function saveAtajos(obj) { localStorage.setItem('atajos', JSON.stringify(obj)); }
-function loadAtajos() { return JSON.parse(localStorage.getItem('atajos') || '{}'); }
+function loadAtajos()   { return JSON.parse(localStorage.getItem('atajos') || '{}'); }
 function saveHistorial(arr) { localStorage.setItem('historial', JSON.stringify(arr)); }
 function loadHistorial() { return JSON.parse(localStorage.getItem('historial') || '[]'); }
 
 // === State ===
 let isRecording = false;
 let mediaRecorder;
-let atajos = loadAtajos();
+let atajos   = loadAtajos();
 let historial = loadHistorial();
 
 // === Drag & Drop (only via dragBar) ===
@@ -44,17 +48,11 @@ function onEnd() {
   dragging = false;
   document.body.style.userSelect = '';
 }
-
 dragBar.addEventListener('mousedown', e => onStart(e.clientX, e.clientY));
 document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
 document.addEventListener('mouseup', onEnd);
-
-dragBar.addEventListener('touchstart', e => {
-  const t = e.touches[0]; onStart(t.clientX, t.clientY);
-});
-document.addEventListener('touchmove', e => {
-  const t = e.touches[0]; onMove(t.clientX, t.clientY);
-});
+dragBar.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY));
+document.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY));
 document.addEventListener('touchend', onEnd);
 
 // === Streaming Whisper (partial transcripts) ===
@@ -82,7 +80,7 @@ micButton.addEventListener('click', async () => {
         }
       };
       mediaRecorder.onstart = () => { micButton.classList.add('active'); isRecording = true; };
-      mediaRecorder.onstop = () => { micButton.classList.remove('active'); isRecording = false; };
+      mediaRecorder.onstop  = () => { micButton.classList.remove('active'); isRecording = false; };
     } catch (err) {
       alert('Error accediendo al micrófono: ' + err.message);
     }
@@ -116,7 +114,130 @@ function renderAtajos() {
   });
 }
 
-document.getElementById('crear-atajo-button').addEventListener('click', () => {
-  const c = document.getElementById('atajo-clave').value.trim();
-  const v = document.getElementById('atajo-sustitucion
+// 1) Toggle dropdown when clicking ⚙️
+atajoBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  atajoDropdown.classList.toggle('show');
+});
 
+// 2) Create atajo
+document.getElementById('crear-atajo-button').addEventListener('click', () => {
+  const clave = document.getElementById('atajo-clave').value.trim();
+  const valor = document.getElementById('atajo-sustitucion').value.trim();
+  if (!clave || !valor) return;
+  if (atajos[clave]) {
+    alert('Esa clave ya existe');
+    return;
+  }
+  atajos[clave] = valor;
+  saveAtajos(atajos);
+  renderAtajos();
+  document.getElementById('atajo-clave').value = '';
+  document.getElementById('atajo-sustitucion').value = '';
+  atajoDropdown.classList.remove('show');
+});
+
+// 3) Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!atajoDropdown.contains(e.target) && e.target !== atajoBtn) {
+    atajoDropdown.classList.remove('show');
+  }
+});
+
+// Initial render of atajos
+renderAtajos();
+
+// === Render and manage Historial ===
+function renderHistorial() {
+  const ul = document.getElementById('historial-list');
+  ul.innerHTML = '';
+  historial.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.textContent = `[${item.fecha}] ${item.texto.slice(0,50)}…`;
+    const del = document.createElement('button');
+    del.textContent = '🗑';
+    del.addEventListener('click', () => {
+      historial.splice(idx, 1);
+      saveHistorial(historial);
+      renderHistorial();
+    });
+    li.appendChild(del);
+    ul.appendChild(li);
+  });
+}
+
+// Add to historial
+function guardarEnHistorial(texto) {
+  const fecha = new Date().toLocaleString();
+  historial.unshift({ fecha, texto });
+  saveHistorial(historial);
+  renderHistorial();
+}
+
+// Toggle historial list
+document.getElementById('historial-button').addEventListener('click', () => {
+  document.getElementById('historial-list').classList.toggle('show');
+});
+renderHistorial();
+
+// === Generar informe via OpenAI con animación y popup ===
+generateBtn.addEventListener('click', async () => {
+  const dictado = transcriptionBox.textContent.trim();
+  if (!dictado) {
+    alert('Dictado vacío.');
+    return;
+  }
+
+  generateBtn.disabled = true;
+  const originalText = generateBtn.textContent;
+  let dots = 0;
+  const interval = setInterval(() => {
+    generateBtn.textContent = 'Generando informe' + '.'.repeat(dots % 4);
+    dots++;
+  }, 500);
+
+  const processed = generarInforme(dictado);
+
+  try {
+    const res = await fetch('/informe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dictado: processed })
+    });
+    const data = await res.json();
+    if (data.informe) {
+      const info = data.informe;
+      popupContent.innerHTML = `
+        <h2>TC DE ${info.estudio}</h2>
+        <h3>TÉCNICA:</h3><p>${info.tecnica}</p>
+        <h3>HALLAZGOS:</h3><p>${info.hallazgos}</p>
+        <h3>CONCLUSIÓN:</h3><p>${info.conclusion}</p>
+      `;
+      popup.style.display = 'block';
+      guardarEnHistorial(JSON.stringify(info));
+    } else {
+      alert('Error: ' + (data.error || 'Desconocido'));
+    }
+  } catch (e) {
+    alert('Error de conexión: ' + e.message);
+  } finally {
+    clearInterval(interval);
+    generateBtn.disabled = false;
+    generateBtn.textContent = originalText;
+  }
+});
+
+// === Cerrar popup ===
+popupClose.addEventListener('click', () => {
+  popup.style.display = 'none';
+});
+
+// === Helper for applying atajos ===
+function generarInforme(txt) {
+  let out = txt;
+  Object.keys(atajos).forEach(k => {
+    const regex = new RegExp(`\\b${k}\\b`, 'gi');
+    out = out.replace(regex, atajos[k]);
+  });
+  return out;
+}

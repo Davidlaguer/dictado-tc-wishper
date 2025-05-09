@@ -42,20 +42,25 @@
       <button id="generate-btn">Generar informe</button>
     </div>
 
-    <!-- Controles secundarios: Nuevo dictado / Atajos / Historial -->
-    <div class="secondary-actions">
-      <button id="reset-btn">♻️ Nuevo dictado</button>
+     <!-- Controles secundarios: Nuevo dictado / Atajos / Historial -->
+  <div class="secondary-actions">
+    <!-- …otros botones… -->
 
-      <div class="dropdown">
-        <button id="atajo-button">⚙️ Atajos</button>
-        <div id="atajo-form" class="dropdown-content">
+    <div class="dropdown">
+      <button id="atajo-button">⚙️ Atajos</button>
+      <div id="atajo-dropdown" class="dropdown-content">
+        <!-- Formulario de creación de atajos -->
+        <div id="atajo-form">
           <strong>➕ Crear nuevo atajo</strong><br>
           <input type="text" id="atajo-clave" placeholder="Palabra clave">
           <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
           <button id="crear-atajo-button">Guardar atajo</button>
         </div>
-        <ul id="atajos-guardados" class="dropdown-content"></ul>
+        <hr>
+        <!-- Lista de atajos guardados -->
+        <ul id="atajos-guardados"></ul>
       </div>
+    </div>  
 
       <div class="dropdown">
         <button id="historial-button">🗂️ Historial</button>
