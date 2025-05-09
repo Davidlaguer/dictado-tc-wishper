@@ -180,7 +180,7 @@ generateBtn.addEventListener('click', async () => {
   generateBtn.textContent = 'Generando informe…';
   const processed = generarInforme(dictado);
   try {
-    const res = await fetch('http://localhost:5050/informe', {
+    const res = await fetch('/informe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dictado: processed })

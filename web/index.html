@@ -41,15 +41,20 @@
   <div class="secondary-actions">
     <button id="reset-btn">♻️ Nuevo dictado</button>
 
-    <div class="dropdown">
-      <button id="atajo-button">⚙️ Atajos</button>
-      <div id="atajo-form" class="dropdown-content">
-        <strong>➕ Crear nuevo atajo</strong><br>
-        <input type="text" id="atajo-clave" placeholder="Palabra clave">
-        <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
-        <button id="crear-atajo-button">Guardar atajo</button>
-      </div>
-    </div>
+<div class="dropdown">
+  <button id="atajo-button">⚙️ Atajos</button>
+
+  <!-- Formulario de creación de atajos -->
+  <div id="atajo-form" class="dropdown-content">
+    <strong>➕ Crear nuevo atajo</strong><br>
+    <input type="text" id="atajo-clave" placeholder="Palabra clave">
+    <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
+    <button id="crear-atajo-button">Guardar atajo</button>
+  </div>
+
+  <!-- Aquí insertas la lista de atajos guardados -->
+  <ul id="atajos-guardados" class="dropdown-content"></ul>
+</div>
 
     <div class="dropdown">
       <button id="historial-button">🗂️ Historial</button>
