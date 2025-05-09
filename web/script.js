@@ -170,42 +170,90 @@ document.getElementById('historial-button').addEventListener('click', () => {
 // Initial render historial
 renderHistorial();
 
-// === Generate report via OpenAI ===
-generateBtn.addEventListener('click', async () => {
-  const dictado = transcriptionBox.textContent.trim();
-  if (!dictado) {
-    alert('Dictado vacío.'); return;
-  }
-  generateBtn.disabled = true;
-  generateBtn.textContent = 'Generando informe…';
-  const processed = generarInforme(dictado);
-  try {
-    const res = await fetch('/informe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dictado: processed })
-    });
-    const data = await res.json();
-    if (data.informe) {
-      const info = data.informe;
-      popupContent.innerHTML = `
-        <h2>TC DE ${info.estudio}</h2>
-        <h3>TÉCNICA:</h3><p>${info.tecnica}</p>
-        <h3>HALLAZGOS:</h3><p>${info.hallazgos}</p>
-        <h3>CONCLUSIÓN:</h3><p>${info.conclusion}</p>
-      `;
-      popup.style.display = 'block';
-      guardarEnHistorial(JSON.stringify(info));
-    } else {
-      alert('Error: ' + (data.error || 'Desconocido')); 
-    }
-  } catch (e) {
-    alert('Error de conexión: ' + e.message);
-  } finally {
-    generateBtn.disabled = false;
-    generateBtn.textContent = 'Generar informe';
-  }
-});
+- // === Generate report via OpenAI ===
+- generateBtn.addEventListener('click', async () => {
+-   const dictado = transcriptionBox.textContent.trim();
+-   if (!dictado) {
+-     alert('Dictado vacío.'); return;
+-   }
+-   generateBtn.disabled = true;
+-   generateBtn.textContent = 'Generando informe…';
+-   const processed = generarInforme(dictado);
+-   try {
+-     const res = await fetch('/informe', {
+-       method: 'POST',
+-       headers: { 'Content-Type': 'application/json' },
+-       body: JSON.stringify({ dictado: processed })
+-     });
+-     const data = await res.json();
+-     if (data.informe) {
+-       const info = data.informe;
+-       popupContent.innerHTML = `
+-         <h2>TC DE ${info.estudio}</h2>
+-         <h3>TÉCNICA:</h3><p>${info.tecnica}</p>
+-         <h3>HALLAZGOS:</h3><p>${info.hallazgos}</p>
+-         <h3>CONCLUSIÓN:</h3><p>${info.conclusion}</p>
+-       `;
+-       popup.style.display = 'block';
+-       guardarEnHistorial(JSON.stringify(info));
+-     } else {
+-       alert('Error: ' + (data.error || 'Desconocido')); 
+-     }
+-   } catch (e) {
+-     alert('Error de conexión: ' + e.message);
+-   } finally {
+-     generateBtn.disabled = false;
+-     generateBtn.textContent = 'Generar informe';
+-   }
+- });
++ // === Generar informe via OpenAI con animación y popup ===
++ generateBtn.addEventListener('click', async () => {
++   const dictado = transcriptionBox.textContent.trim();
++   if (!dictado) {
++     alert('Dictado vacío.');
++     return;
++   }
++
++   // Estado inicial del botón y animación de espera
++   generateBtn.disabled = true;
++   const originalText = generateBtn.textContent;
++   let dots = 0;
++   const interval = setInterval(() => {
++     generateBtn.textContent = 'Generando informe' + '.'.repeat(dots % 4);
++     dots++;
++   }, 500);
++
++   // Pre-procesar atajos
++   const processed = generarInforme(dictado);
++
++   try {
++     const res = await fetch('/informe', {
++       method: 'POST',
++       headers: { 'Content-Type': 'application/json' },
++       body: JSON.stringify({ dictado: processed })
++     });
++     const data = await res.json();
++     if (data.informe) {
++       const info = data.informe;
++       popupContent.innerHTML = `
++         <h2>TC DE ${info.estudio}</h2>
++         <h3>TÉCNICA:</h3><p>${info.tecnica}</p>
++         <h3>HALLAZGOS:</h3><p>${info.hallazgos}</p>
++         <h3>CONCLUSIÓN:</h3><p>${info.conclusion}</p>
++       `;
++       popup.style.display = 'block';
++       guardarEnHistorial(JSON.stringify(info));
++     } else {
++       alert('Error: ' + (data.error || 'Desconocido'));
++     }
++   } catch (e) {
++     alert('Error de conexión: ' + e.message);
++   } finally {
++     clearInterval(interval);
++     generateBtn.disabled = false;
++     generateBtn.textContent = originalText;
++   }
++ });
 
 // === Close popup ===
 popupClose.addEventListener('click', () => { popup.style.display = 'none'; });
