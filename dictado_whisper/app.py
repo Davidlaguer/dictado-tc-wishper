@@ -35,7 +35,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 def index():
     return app.send_static_file('index.html')
 
-# Sirve cualquier otro archivo estático
+# Sirve cualquier otro archivo estático (CSS, JS, imágenes…)
 @app.route('/<path:filename>')
 def static_files(filename):
     return app.send_static_file(filename)
@@ -68,50 +68,35 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     messages = [
-        {"role": "system", "content": (
-            "Eres un radiólogo experto. Genera siempre un informe con este formato exacto:
+        {
+            "role": "system",
+            "content": """Eres un radiólogo experto. Genera siempre un informe con este formato exacto:
 
-"
-            "TC DE {ESTUDIO}:
+TC DE {ESTUDIO}:
 
-"
-            "TÉCNICA:
-"
-            "{TEXTO_DE_LA_TECNICA}
+TÉCNICA:
+{TEXTO_DE_LA_TECNICA}
 
-"
-            "HALLAZGOS:
-"
-            "{TEXTO_DE_LOS_HALLAZGOS}
+HALLAZGOS:
+{TEXTO_DE_LOS_HALLAZGOS}
 
-"
-            "CONCLUSIÓN:
-"
-            "{TEXTO_DE_LA_CONCLUSION}
+CONCLUSIÓN:
+{TEXTO_DE_LA_CONCLUSION}
 
-"
-            "Devuélvelo **solo** como un objeto JSON con las claves:
-"
-            "{
-"
-            "  \"estudio\": \"...\",
-"
-            "  \"tecnica\": \"...\",
-"
-            "  \"hallazgos\": \"...\",
-"
-            "  \"conclusion\": \"...\"
-"
-            "}
+Devuélvelo **solo** como un objeto JSON con las claves:
+{
+  \"estudio\": \"...\",
+  \"tecnica\": \"...\",
+  \"hallazgos\": \"...\",
+  \"conclusion\": \"...\"
+}
 
-"
-            "No incluyas nada fuera de ese JSON."
-        )},
+No incluyas nada fuera de ese JSON."""
+        },
         {"role": "user", "content": dictado}
     ]
 
     print("📤 [informe] Mensajes a OpenAI:", messages)
-    # Llamada al cliente moderno
     resp = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
@@ -122,7 +107,6 @@ def generar_informe():
     raw = resp.choices[0].message.content.strip()
     print("📄 [informe] Contenido crudo:", raw)
 
-    # Intento parseo y emisión
     try:
         informe_json = json.loads(raw)
         return jsonify(informe=informe_json)
@@ -138,8 +122,3 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
     print(f"🔥 Iniciando servidor WebSocket con Whisper y OpenAI (puerto {port})…")
     socketio.run(app, host='0.0.0.0', port=port)
-    port = int(os.getenv('PORT', 5050))
-    print(f"🔥 Iniciando servidor WebSocket con Whisper y OpenAI (puerto {port})…")
-    socketio.run(app, host='0.0.0.0', port=port)
-
-
