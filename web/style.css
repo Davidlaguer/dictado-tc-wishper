@@ -1,3 +1,4 @@
+ /* style.css */
 /* === RESET Y BOX-SIZING === */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -196,3 +197,11 @@ body {
     width: 90%;
   }
 }
+
+/* === Placeholder para contenteditable === */
+#transcription[placeholder]:empty:before {
+  content: attr(placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+
