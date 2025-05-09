@@ -11,11 +11,26 @@ if not api_key:
 openai.api_key = api_key
 
 # ————— App y SocketIO —————
-app = Flask(__name__)
+# Indicamos que los estáticos están en ../web
+app = Flask(
+    __name__,
+    static_folder=os.path.join(os.path.dirname(__file__), '../web'),
+    static_url_path=''      # sirve /index.html, /style.css, /script.js
+)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# ————— Whisper —————
+# Sirve index.html en la raíz
+@app.route('/')
+def index():
+    return app.send_static_file('index.html')
+
+# Sirve cualquier otro archivo estático (CSS, JS, imágenes…)
+@app.route('/<path:filename>')
+def static_files(filename):
+    return app.send_static_file(filename)
+
+# ————— Whisper Streaming —————
 model = whisper.load_model("base")
 
 @socketio.on('audio_chunk')
@@ -34,6 +49,7 @@ def handle_audio_chunk(data):
         text = result.get('text', '').strip()
     emit('transcription', {'text': text})
 
+# ————— Generación de informe con GPT-4 —————
 @app.route('/informe', methods=['POST'])
 def generar_informe():
     data = request.get_json() or {}
@@ -55,10 +71,10 @@ def generar_informe():
                 "{TEXTO_DE_LA_CONCLUSION}\n\n"
                 "Devuélvelo **solo** como un objeto JSON con las claves:\n"
                 "{\n"
-                '  "estudio": "...",\n'
-                '  "tecnica": "...",\n'
-                '  "hallazgos": "...",\n'
-                '  "conclusion": "..."\n'
+                "  \"estudio\": \"...\",\n"
+                "  \"tecnica\": \"...\",\n"
+                "  \"hallazgos\": \"...\",\n"
+                "  \"conclusion\": \"...\"\n"
                 "}\n\n"
                 "No incluyas nada fuera de ese JSON."
             )
@@ -82,6 +98,6 @@ def generar_informe():
         return jsonify(error=str(e)), 500
 
 if __name__ == '__main__':
-    print("🔥 Iniciando servidor WebSocket con Whisper y OpenAI (puerto 5050)…")
-    socketio.run(app, host='0.0.0.0', port=5050)
-
+    port = int(os.getenv('PORT', 5050))
+    print(f"🔥 Iniciando servidor WebSocket con Whisper y OpenAI (puerto {port})…")
+    socketio.run(app, host='0.0.0.0', port=port)
