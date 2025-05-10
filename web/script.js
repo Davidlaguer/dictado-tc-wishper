@@ -195,39 +195,17 @@ generateBtn.addEventListener('click', async () => {
       body: JSON.stringify({ dictado })
     });
 
-    const raw = await res.text(); // usamos text en vez de .json por seguridad
-
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch (err) {
-      console.warn('⚠️ No se pudo parsear JSON. Mostrando texto plano:', raw);
-      popupContent.innerHTML = `<pre>${raw}</pre>`;
+    const data = await res.json();
+    if (data.informe) {
+      popupContent.innerText = data.informe.trim();  // mostrar exactamente como viene
       popup.style.display = 'block';
-      alert('⚠️ El servidor respondió con un formato inesperado. Se muestra texto plano.');
-      return;
-    }
-
-    console.log("📄 Informe recibido:", data);
-
-    if (data.informe && typeof data.informe === 'object') {
-      const { estudio, tecnica, hallazgos, conclusion } = data.informe;
-
-      popupContent.innerHTML = `
-        <h2>TC DE ${estudio?.toUpperCase() || 'ESTUDIO'}</h2>
-        <h3>TÉCNICA:</h3><p>${tecnica || '—'}</p>
-        <h3>HALLAZGOS:</h3><p>${hallazgos || '—'}</p>
-        <h3>CONCLUSIÓN:</h3><p>${conclusion || '—'}</p>
-      `;
-
-      popup.style.display = 'block';
-      guardarEnHistorial(JSON.stringify(data.informe));
+      guardarEnHistorial(data.informe.trim());
     } else {
-      alert('⚠️ Error: el Assistant no devolvió un informe válido.');
+      alert('⚠️ No se recibió ningún informe.');
     }
 
   } catch (e) {
-    alert('❌ Error de red o servidor: ' + e.message);
+    alert('❌ Error de red: ' + e.message);
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generar informe';

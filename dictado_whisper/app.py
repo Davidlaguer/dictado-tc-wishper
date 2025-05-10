@@ -1,15 +1,12 @@
 import os
 from dotenv import load_dotenv
 
-# ————— Carga y verificación de la clave —————
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise RuntimeError("🔑 La variable OPENAI_API_KEY no está definida en el entorno")
 print("✅ OPENAI_API_KEY detectada ✅")
 
-# ————— Imports del resto de dependencias —————
-import json
 import tempfile
 import subprocess
 from flask import Flask, request, jsonify
@@ -18,10 +15,8 @@ from flask_socketio import SocketIO, emit
 import whisper
 from openai import OpenAI
 
-# ————— Inicializa cliente OpenAI —————
 client = OpenAI(api_key=api_key)
 
-# ————— App y SocketIO —————
 app = Flask(
     __name__,
     static_folder=os.path.join(os.path.dirname(__file__), '../web'),
@@ -30,17 +25,15 @@ app = Flask(
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Sirve index.html en la raíz
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
 
-# Sirve cualquier otro archivo estático (CSS, JS, imágenes…)
 @app.route('/<path:filename>')
 def static_files(filename):
     return app.send_static_file(filename)
 
-# ————— Whisper Streaming —————
+# --- Whisper ---
 model = whisper.load_model("base")
 
 @socketio.on('audio_chunk')
@@ -59,7 +52,7 @@ def handle_audio_chunk(data):
         text = result.get('text', '').strip()
     emit('transcription', {'text': text})
 
-# ————— Generación de informe con GPT-4 —————
+# --- Generar informe desde Assistant ---
 @app.route('/informe', methods=['POST'])
 def generar_informe():
     data = request.get_json() or {}
@@ -70,55 +63,48 @@ def generar_informe():
     messages = [
         {
             "role": "system",
-            "content": """Eres un radiólogo experto. Genera siempre un informe con este formato exacto:
+            "content": """
+Eres un radiólogo experto. A partir de un dictado por voz, debes generar un informe radiológico completo y redactado de forma clara y profesional.
 
-TC DE {ESTUDIO}:
+El dictado puede incluir indicaciones como "modo plantillas", hallazgos específicos, o instrucciones como "valida frases normales". Debes aplicar la plantilla correspondiente, sustituir o añadir hallazgos en su lugar adecuado, y generar el informe final completo.
+
+El formato debe ser este:
+
+TC DE [ESTUDIO]:
 
 TÉCNICA:
-{TEXTO_DE_LA_TECNICA}
+[Descripción de técnica basada en lo dictado o plantilla]
 
 HALLAZGOS:
-{TEXTO_DE_LOS_HALLAZGOS}
+[Frases normales más hallazgos dictados]
 
 CONCLUSIÓN:
-{TEXTO_DE_LA_CONCLUSION}
+[solo si el dictado la incluye]
 
-Devuélvelo **solo** como un objeto JSON con las claves:
-{
-  \"estudio\": \"...\",
-  \"tecnica\": \"...\",
-  \"hallazgos\": \"...\",
-  \"conclusion\": \"...\"
-}
-
-No incluyas nada fuera de ese JSON."""
+Devuelve únicamente el informe completo como texto plano. No incluyas encabezados tipo “INFORME:”, ni JSON, ni explicaciones. Solo el cuerpo del informe final, tal como se entregaría a un clínico.
+"""
         },
         {"role": "user", "content": dictado}
     ]
 
-    print("📤 [informe] Mensajes a OpenAI:", messages)
-    resp = client.chat.completions.create(
-        model="gpt-4",
-        messages=messages,
-        temperature=0.2,
-        max_tokens=1200
-    )
-    print("📥 [informe] Respuesta completa:", resp)
-    raw = resp.choices[0].message.content.strip()
-    print("📄 [informe] Contenido crudo:", raw)
+    print("📤 Enviando dictado al Assistant:", dictado)
 
     try:
-        informe_json = json.loads(raw)
-        return jsonify(informe=informe_json)
-    except json.JSONDecodeError as e:
-        print("⚠️ [informe] Error al parsear JSON de OpenAI:", e)
-        print("⚠️ [informe] Raw recibido:", raw)
-        return jsonify(error="Error al parsear JSON de OpenAI"), 500
+        resp = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.2,
+            max_tokens=1200
+        )
+        raw = resp.choices[0].message.content.strip()
+        return jsonify(informe=raw)
+
     except Exception as e:
-        print("⚠️ [informe] Otro error inesperado:", e)
+        print("❌ Error al generar informe:", e)
         return jsonify(error=str(e)), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
-    print(f"🔥 Iniciando servidor WebSocket con Whisper y OpenAI (puerto {port})…")
+    print(f"🔥 Servidor iniciado en puerto {port}")
     socketio.run(app, host='0.0.0.0', port=port)
+
