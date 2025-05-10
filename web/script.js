@@ -180,32 +180,54 @@ renderHistorial();
 // === Generar informe ===
 generateBtn.addEventListener('click', async () => {
   const dictado = transcriptionBox.textContent.trim();
-  if (!dictado) return alert('Dictado vacío.');
+  if (!dictado) {
+    alert('Dictado vacío.');
+    return;
+  }
+
   generateBtn.disabled = true;
   generateBtn.textContent = 'Generando informe…';
-  const processed = aplicarAtajos(dictado);
+
   try {
     const res = await fetch('/informe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dictado: processed })
+      body: JSON.stringify({ dictado })
     });
-    const data = await res.json();
-    if (data.informe) {
-      const info = data.informe;
-      popupContent.innerHTML = `
-        <h2>TC DE ${info.estudio}</h2>
-        <h3>TÉCNICA:</h3><p>${info.tecnica}</p>
-        <h3>HALLAZGOS:</h3><p>${info.hallazgos}</p>
-        <h3>CONCLUSIÓN:</h3><p>${info.conclusion}</p>
-      `;
+
+    const raw = await res.text(); // usamos text en vez de .json por seguridad
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (err) {
+      console.warn('⚠️ No se pudo parsear JSON. Mostrando texto plano:', raw);
+      popupContent.innerHTML = `<pre>${raw}</pre>`;
       popup.style.display = 'block';
-      guardarEnHistorial(JSON.stringify(info));
-    } else {
-      alert('Error: ' + (data.error || 'desconocido'));
+      alert('⚠️ El servidor respondió con un formato inesperado. Se muestra texto plano.');
+      return;
     }
+
+    console.log("📄 Informe recibido:", data);
+
+    if (data.informe && typeof data.informe === 'object') {
+      const { estudio, tecnica, hallazgos, conclusion } = data.informe;
+
+      popupContent.innerHTML = `
+        <h2>TC DE ${estudio?.toUpperCase() || 'ESTUDIO'}</h2>
+        <h3>TÉCNICA:</h3><p>${tecnica || '—'}</p>
+        <h3>HALLAZGOS:</h3><p>${hallazgos || '—'}</p>
+        <h3>CONCLUSIÓN:</h3><p>${conclusion || '—'}</p>
+      `;
+
+      popup.style.display = 'block';
+      guardarEnHistorial(JSON.stringify(data.informe));
+    } else {
+      alert('⚠️ Error: el Assistant no devolvió un informe válido.');
+    }
+
   } catch (e) {
-    alert('Error de red: ' + e.message);
+    alert('❌ Error de red o servidor: ' + e.message);
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generar informe';
