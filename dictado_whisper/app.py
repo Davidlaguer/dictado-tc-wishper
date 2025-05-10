@@ -1,22 +1,28 @@
 import os
+import tempfile
+import subprocess
+import time
 from dotenv import load_dotenv
 
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+
+import whisper
+from openai import OpenAI
+
+# — Carga clave OpenAI —
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise RuntimeError("🔑 La variable OPENAI_API_KEY no está definida en el entorno")
 print("✅ OPENAI_API_KEY detectada ✅")
 
-import tempfile
-import subprocess
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
-import whisper
-from openai import OpenAI
-
+# — Cliente OpenAI —
 client = OpenAI(api_key=api_key)
+assistant_id = "asst_fgKQWIHbzkBVc93SOD6iSYTh"
 
+# — App Flask —
 app = Flask(
     __name__,
     static_folder=os.path.join(os.path.dirname(__file__), '../web'),
@@ -33,7 +39,7 @@ def index():
 def static_files(filename):
     return app.send_static_file(filename)
 
-# --- Whisper ---
+# — Whisper modelo local —
 model = whisper.load_model("base")
 
 @socketio.on('audio_chunk')
@@ -52,7 +58,7 @@ def handle_audio_chunk(data):
         text = result.get('text', '').strip()
     emit('transcription', {'text': text})
 
-# --- Generar informe desde Assistant ---
+# — Generación de informe vía Assistant API —
 @app.route('/informe', methods=['POST'])
 def generar_informe():
     data = request.get_json() or {}
@@ -60,51 +66,44 @@ def generar_informe():
     if not dictado:
         return jsonify(error="Dictado vacío"), 400
 
-    messages = [
-        {
-            "role": "system",
-            "content": """
-Eres un radiólogo experto. A partir de un dictado por voz, debes generar un informe radiológico completo y redactado de forma clara y profesional.
-
-El dictado puede incluir indicaciones como "modo plantillas", hallazgos específicos, o instrucciones como "valida frases normales". Debes aplicar la plantilla correspondiente, sustituir o añadir hallazgos en su lugar adecuado, y generar el informe final completo.
-
-El formato debe ser este:
-
-TC DE [ESTUDIO]:
-
-TÉCNICA:
-[Descripción de técnica basada en lo dictado o plantilla]
-
-HALLAZGOS:
-[Frases normales más hallazgos dictados]
-
-CONCLUSIÓN:
-[solo si el dictado la incluye]
-
-Devuelve únicamente el informe completo como texto plano. No incluyas encabezados tipo “INFORME:”, ni JSON, ni explicaciones. Solo el cuerpo del informe final, tal como se entregaría a un clínico.
-"""
-        },
-        {"role": "user", "content": dictado}
-    ]
-
-    print("📤 Enviando dictado al Assistant:", dictado)
-
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4",
-            messages=messages,
-            temperature=0.2,
-            max_tokens=1200
+        print("📤 Creando thread para Assistant…")
+        thread = client.beta.threads.create()
+
+        print("📩 Enviando dictado al thread:", dictado)
+        client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=dictado
         )
-        raw = resp.choices[0].message.content.strip()
-        return jsonify(informe=raw)
+
+        print("🚀 Lanzando Assistant con ID:", assistant_id)
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=assistant_id
+        )
+
+        # Esperar a que termine (máx 30s)
+        for _ in range(30):
+            time.sleep(2)
+            run_status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+            if run_status.status == "completed":
+                break
+            elif run_status.status in ["failed", "cancelled", "expired"]:
+                return jsonify(error=f"Assistant falló: {run_status.status}"), 500
+        else:
+            return jsonify(error="Tiempo de espera excedido (timeout)"), 504
+
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        respuesta = messages.data[0].content[0].text.value.strip()
+        print("📄 Informe recibido:", respuesta)
+        return jsonify(informe=respuesta)
 
     except Exception as e:
-        print("❌ Error al generar informe:", e)
+        print("❌ Error durante generación:", e)
         return jsonify(error=str(e)), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
     print(f"🔥 Servidor iniciado en puerto {port}")
     socketio.run(app, host='0.0.0.0', port=port)
-
