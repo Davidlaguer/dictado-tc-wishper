@@ -12,7 +12,7 @@
     <!-- Pestañita de arrastre -->
     <div id="drag-bar"></div>
 
-    <!-- Transcripción en tiempo real (editable para copiar/pegar) -->
+    <!-- Transcripción en tiempo real -->
     <div
       id="transcription"
       contenteditable="true"
@@ -22,18 +22,7 @@
     <!-- Botón Micrófono -->
     <div class="center-controls">
       <button id="mic-button" aria-label="Micrófono">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             width="28" height="28"
-             viewBox="0 0 24 24"
-             fill="currentColor">
-          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3
-                   3 0 0 0 3 3zm5-3a5 5 0 0
-                   1-10 0H5a7 7 0 0 0 14
-                   0h-2zM11 19.93V22h2v-2.07a8.001
-                   8.001 0 0 0 6.93-6.93H18a6 6 0
-                   0 1-12 0H4.07A8.001
-                   8.001 0 0 0 11 19.93z"/>
-        </svg>
+        <!-- SVG… -->
       </button>
     </div>
 
@@ -42,45 +31,48 @@
       <button id="generate-btn">Generar informe</button>
     </div>
 
-     <!-- Controles secundarios: Nuevo dictado / Atajos / Historial -->
-  <div class="secondary-actions">
-    <!-- …otros botones… -->
+    <!-- Controles secundarios: Nuevo dictado / Atajos / Historial -->
+    <div class="secondary-actions">
+      <!-- 1) Botón Nuevo dictado -->
+      <button id="reset-btn">♻️ Nuevo dictado</button>
 
-    <div class="dropdown">
-      <button id="atajo-button">⚙️ Atajos</button>
-      <div id="atajo-dropdown" class="dropdown-content">
-        <!-- Formulario de creación de atajos -->
-        <div id="atajo-form">
-          <strong>➕ Crear nuevo atajo</strong><br>
-          <input type="text" id="atajo-clave" placeholder="Palabra clave">
-          <input type="text" id="atajo-sustitucion" placeholder="Texto sustituto">
-          <button id="crear-atajo-button">Guardar atajo</button>
+      <!-- 2) Menú Atajos -->
+      <div class="dropdown">
+        <button id="atajo-button">⚙️ Atajos</button>
+        <div id="atajo-dropdown" class="dropdown-content">
+          <!-- Formulario atajos -->
+          <div id="atajo-formulario">
+            <strong>➕ Nuevo atajo</strong><br>
+            <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
+            <input type="text" id="atajo-valor" placeholder="Texto sustituto">
+            <button id="crear-atajo-button">Añadir atajo</button>
+          </div>
+          <hr>
+          <!-- Toggle lista atajos -->
+          <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
+          <!-- Lista de atajos -->
+          <ul id="atajos-guardados" style="display:none;"></ul>
         </div>
-        <hr>
-        <!-- Lista de atajos guardados -->
-        <ul id="atajos-guardados"></ul>
       </div>
-    </div>  
 
+      <!-- 3) Menú Historial -->
       <div class="dropdown">
         <button id="historial-button">🗂️ Historial</button>
         <ul id="historial-list" class="dropdown-content"></ul>
       </div>
     </div>
 
-    <!-- Popup para mostrar el informe JSON formateado -->
+    <!-- Popup Informe -->
     <div id="popup">
       <h3>INFORME GENERADO</h3>
       <pre id="popup-content"></pre>
-      <button onclick="cerrarPopup()">Copiar</button>
-      <button onclick="cerrarPopup()">Exportar PDF</button>
+      <button id="popup-copy">Copiar</button>
+      <button id="popup-pdf">Exportar PDF</button>
       <button id="popup-close">Cerrar</button>
     </div>
   </div>
 
-  <!-- Socket.IO cliente -->
   <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
-  <!-- Lógica de la app -->
   <script src="script.js"></script>
 </body>
 </html>
