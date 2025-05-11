@@ -67,6 +67,7 @@ generateBtn.addEventListener('click', async () => {
 
   generateBtn.disabled = true;
   generateBtn.textContent = 'Generando…';
+  generateBtn.classList.add('loading');
 
   try {
     const res = await fetch('/informe', {
@@ -87,6 +88,7 @@ generateBtn.addEventListener('click', async () => {
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generar informe';
+    generateBtn.classList.remove('loading');
   }
 });
 
@@ -126,7 +128,7 @@ function renderHistorial() {
   historialList.innerHTML = '';
   historial.forEach(({ fecha, texto }, i) => {
     const li = document.createElement('li');
-    li.textContent = `[${fecha}]`; // Mostrar solo título
+    li.textContent = `[${fecha}]`;
     li.addEventListener('click', () => {
       outputBox.value = texto;
     });

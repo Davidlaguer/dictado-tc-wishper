@@ -1,127 +1,161 @@
-/* style.css (modo TouchBoard mejorado) */
-
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #f4f6f8;
-  font-family: Arial, sans-serif;
+/* style.css */
+/* === RESET Y BOX-SIZING === */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-.container {
-  max-width: 900px;
-  margin: 30px auto;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 24px 32px;
+/* === REGLAS GENERALES === */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+  display: flex;
+  justify-content: center;
+}
+
+#dashboard {
+  background: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  width: 800px;
+  max-width: 95vw;
 }
 
 h1 {
   text-align: left;
   font-size: 24px;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
 
-.menu {
+.menu-top {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-bottom: 20px;
 }
-
-.menu button {
-  padding: 6px 14px;
-  border-radius: 6px;
+.menu-top button {
+  padding: 6px 12px;
   border: none;
-  background-color: #f0f0f0;
+  border-radius: 6px;
   cursor: pointer;
+  background: #eee;
 }
 
-.menu button:hover {
-  background-color: #e0e0e0;
-}
-
-label {
-  display: block;
-  font-weight: bold;
-  margin-top: 20px;
-  margin-bottom: 8px;
-}
-
-textarea, #output {
+/* === CAJA DE TRANSCRIPCIÓN === */
+#transcription {
   width: 100%;
-  height: 180px;
-  resize: vertical;
-  padding: 10px;
+  height: 200px;
+  background: #fff;
+  padding: 12px;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: monospace;
-  font-size: 15px;
-}
-
-.controls {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  margin-top: 16px;
-  flex-wrap: wrap;
-}
-
-.controls button {
-  padding: 10px 20px;
-  font-size: 14px;
   border-radius: 6px;
+  font-size: 16px;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+/* === MICRÓFONO Y ACCIONES === */
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.actions button {
+  flex: 1;
+  padding: 10px;
   border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 16px;
+}
+#mic-button {
+  background: #007bff;
+}
+#mic-button.active {
+  background: red;
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,0,0,0.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(255,0,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+}
+#generate-btn { background: #0066cc; }
+#copy-btn { background: #28a745; }
+#reset-btn { background: #17a2b8; }
+
+/* === RESULTADO === */
+#output {
+  width: 100%;
+  height: 200px;
+  background: #fff;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+/* === BOTÓN PDF === */
+#pdf-btn {
+  margin-top: 10px;
+  padding: 10px 20px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
 }
 
-button#mic-button {
-  background-color: #007bff;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}
-
-button#mic-button.active::after {
-  content: '';
+/* === DROPDOWN MENÚS === */
+.dropdown-content {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 10px;
-  height: 10px;
-  background-color: red;
-  border-radius: 50%;
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-button#generate-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-#historial-list, #atajo-dropdown {
-  margin-top: 10px;
-  background-color: #f9f9f9;
-  padding: 10px;
+  background: white;
+  border: 1px solid #ccc;
   border-radius: 6px;
-  max-height: 200px;
-  overflow-y: auto;
-  font-size: 14px;
+  padding: 10px;
   display: none;
+  z-index: 100;
 }
-
-#historial-list.show, #atajo-dropdown.show {
+.dropdown-content.show {
   display: block;
 }
 
-#output-label {
-  margin-top: 30px;
-  font-weight: bold;
+/* === HISTORIAL / ATAJOS === */
+#historial-list, #atajos-guardados {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+#historial-list li, #atajos-guardados li {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  #dashboard {
+    padding: 20px;
+    width: 100%;
+  }
+  .actions button {
+    flex: 1 1 100%;
+  }
+}
+
+/* === Placeholder editable === */
+#transcription[placeholder]:empty:before {
+  content: attr(placeholder);
+  color: #aaa;
+  pointer-events: none;
 }
