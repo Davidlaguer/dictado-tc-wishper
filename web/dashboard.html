@@ -11,9 +11,25 @@
     <header>
       <h1>DICTADO INFORMES TC</h1>
       <div class="menu-buttons">
-        <button id="historial-btn">📁 Historial</button>
-        <button id="atajos-btn">⚙️ Atajos</button>
-        <button id="toggle-app">📱 Modo app móvil</button>
+        <div class="dropdown">
+          <button id="historial-button">📁 Historial</button>
+          <ul id="historial-list" class="dropdown-content hidden"></ul>
+        </div>
+        <div class="dropdown">
+          <button id="atajo-button">⚙️ Atajos</button>
+          <div id="atajo-dropdown" class="dropdown-content hidden">
+            <div>
+              <strong>➕ Nuevo atajo</strong><br>
+              <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
+              <input type="text" id="atajo-valor" placeholder="Texto sustituto">
+              <button id="crear-atajo-button">Añadir atajo</button>
+            </div>
+            <hr>
+            <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
+            <ul id="atajos-guardados"></ul>
+          </div>
+        </div>
+        <button id="modo-app-button">📱 Modo app móvil</button>
         <button id="logout-button">🔓 Cerrar sesión</button>
       </div>
     </header>
@@ -24,7 +40,7 @@
       <div class="controls">
         <button id="mic-button">🎤 Micrófono</button>
         <button id="generate-btn">Generar informe</button>
-        <button id="copy-input-btn">📋 Copiar</button>
+        <button id="copy-btn">📋 Copiar</button>
         <button id="reset-btn">♻️ Nuevo dictado</button>
       </div>
     </section>
@@ -32,32 +48,9 @@
     <section>
       <label for="output">INFORME GENERADO:</label>
       <textarea id="output" readonly></textarea>
-      <div class="controls">
-        <button id="copy-btn">📋 Copiar</button>
-        <button id="pdf-btn">🧾 Exportar PDF</button>
-      </div>
+      <button id="pdf-btn">📜 Exportar PDF</button>
+      <button id="copy-output-btn">📋 Copiar</button>
     </section>
-
-    <div id="popup" class="popup hidden">
-      <h3>INFORME GENERADO</h3>
-      <pre id="popup-content"></pre>
-      <button id="popup-copy">Copiar</button>
-      <button id="popup-close">Cerrar</button>
-    </div>
-
-    <div id="atajos-panel" class="dropdown-content hidden">
-      <div>
-        <strong>➕ Nuevo atajo</strong><br>
-        <input type="text" id="clave" placeholder="Palabra a sustituir">
-        <input type="text" id="valor" placeholder="Texto sustituto">
-        <button id="add-atajo">Añadir atajo</button>
-      </div>
-      <hr>
-      <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
-      <ul id="atajos-list"></ul>
-    </div>
-
-    <ul id="historial-list" class="dropdown-content hidden"></ul>
   </div>
 
   <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>

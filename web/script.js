@@ -1,5 +1,4 @@
 // === script.js actualizado ===
-
 const socket = io();
 
 // === Elementos DOM ===
@@ -8,18 +7,16 @@ const micButton = document.getElementById('mic-button');
 const generateBtn = document.getElementById('generate-btn');
 const resetBtn = document.getElementById('reset-btn');
 const copyBtn = document.getElementById('copy-btn');
-const pdfBtn = document.getElementById('popup-pdf');
+const pdfBtn = document.getElementById('pdf-btn');
 const outputBox = document.getElementById('output');
-const historialBtn = document.getElementById('historial-btn');
+const historialBtn = document.getElementById('historial-button');
 const historialList = document.getElementById('historial-list');
-const atajosBtn = document.getElementById('atajos-btn');
-const atajosPanel = document.getElementById('atajos-panel');
-const toggleAppBtn = document.getElementById('toggle-app');
-const copyInputBtn = document.getElementById('copy-input-btn');
-const popupCopy = document.getElementById('popup-copy');
-const popupClose = document.getElementById('popup-close');
-const popup = document.getElementById('popup');
-const popupContent = document.getElementById('popup-content');
+const atajosBtn = document.getElementById('atajo-button');
+const atajosPanel = document.getElementById('atajo-dropdown');
+const toggleAppBtn = document.getElementById('modo-app-button');
+const addAtajoBtn = document.getElementById('crear-atajo-button');
+const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
+const atajosGuardadosList = document.getElementById('atajos-guardados');
 
 let isRecording = false;
 let mediaRecorder;
@@ -28,7 +25,7 @@ let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 
 // === Inicialización ===
 document.addEventListener('DOMContentLoaded', () => {
-  historialList.classList.add('hidden');
+  historialList.style.display = 'none';
   atajosPanel.classList.add('hidden');
   renderHistorial();
   renderAtajos();
@@ -48,13 +45,15 @@ micButton.addEventListener('click', async () => {
           });
         }
       };
-      mediaRecorder.onstart = () => { micButton.classList.add('active'); isRecording = true; };
-      mediaRecorder.onstop = () => { micButton.classList.remove('active'); isRecording = false; };
+      micButton.classList.add('active');
+      mediaRecorder.onstop = () => micButton.classList.remove('active');
+      isRecording = true;
     } catch (e) {
       alert('Error con el micrófono: ' + e.message);
     }
   } else {
     mediaRecorder.stop();
+    isRecording = false;
   }
 });
 
@@ -69,7 +68,6 @@ socket.on('transcription', ({ text }) => {
 generateBtn.addEventListener('click', async () => {
   const dictado = transcriptionBox.value.trim();
   if (!dictado) return alert('Dictado vacío');
-
   generateBtn.disabled = true;
   generateBtn.textContent = 'Generando…';
 
@@ -83,8 +81,6 @@ generateBtn.addEventListener('click', async () => {
 
     if (data.informe) {
       outputBox.value = data.informe.trim();
-      popupContent.textContent = data.informe.trim();
-      popup.classList.remove('hidden');
       guardarInforme(data.informe);
     } else {
       alert('Error generando informe.');
@@ -97,22 +93,14 @@ generateBtn.addEventListener('click', async () => {
   }
 });
 
-// === Copiar informe generado ===
+// === Copiar dictado e informe ===
 copyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(outputBox.value.trim());
-});
-
-popupCopy.addEventListener('click', () => {
-  navigator.clipboard.writeText(popupContent.textContent.trim());
-});
-
-popupClose.addEventListener('click', () => {
-  popup.classList.add('hidden');
-});
-
-// === Copiar dictado ===
-copyInputBtn.addEventListener('click', () => {
   transcriptionBox.select();
+  document.execCommand('copy');
+});
+
+document.getElementById('popup-copy').addEventListener('click', () => {
+  outputBox.select();
   document.execCommand('copy');
 });
 
@@ -135,7 +123,7 @@ pdfBtn.addEventListener('click', () => {
   link.click();
 });
 
-// === Guardar historial ===
+// === Historial ===
 function guardarInforme(texto) {
   const fecha = new Date().toLocaleString();
   historial.unshift({ fecha, texto });
@@ -148,9 +136,7 @@ function renderHistorial() {
   historial.forEach(({ fecha, texto }, i) => {
     const li = document.createElement('li');
     li.textContent = `[${fecha}]`;
-    li.addEventListener('click', () => {
-      outputBox.value = texto;
-    });
+    li.addEventListener('click', () => outputBox.value = texto);
     const del = document.createElement('button');
     del.textContent = '🗑';
     del.addEventListener('click', () => {
@@ -164,12 +150,15 @@ function renderHistorial() {
 }
 
 historialBtn.addEventListener('click', () => {
-  historialList.classList.toggle('hidden');
+  const visible = historialList.classList.toggle('show');
+  const rect = historialBtn.getBoundingClientRect();
+  historialList.style.top = `${rect.bottom + window.scrollY}px`;
+  historialList.style.left = `${rect.left + window.scrollX}px`;
 });
 
+// === Atajos ===
 function renderAtajos() {
-  const ul = document.getElementById('atajos-guardados');
-  ul.innerHTML = '';
+  atajosGuardadosList.innerHTML = '';
   Object.entries(atajos).forEach(([k, v]) => {
     const li = document.createElement('li');
     li.textContent = `${k} → ${v}`;
@@ -181,11 +170,11 @@ function renderAtajos() {
       renderAtajos();
     };
     li.appendChild(b);
-    ul.appendChild(li);
+    atajosGuardadosList.appendChild(li);
   });
 }
 
-document.getElementById('crear-atajo-button').addEventListener('click', () => {
+addAtajoBtn.addEventListener('click', () => {
   const clave = document.getElementById('atajo-clave').value.trim();
   const valor = document.getElementById('atajo-valor').value.trim();
   if (!clave || !valor) return alert('Completa ambos campos');
@@ -195,21 +184,24 @@ document.getElementById('crear-atajo-button').addEventListener('click', () => {
   renderAtajos();
 });
 
-document.getElementById('toggle-atajos-list').addEventListener('click', () => {
-  const lista = document.getElementById('atajos-guardados');
-  if (lista.style.display === 'block') {
-    lista.style.display = 'none';
-    document.getElementById('toggle-atajos-list').textContent = '📋 Ver atajos guardados';
-  } else {
-    lista.style.display = 'block';
-    document.getElementById('toggle-atajos-list').textContent = '❌ Ocultar atajos guardados';
-  }
-});
-
 atajosBtn.addEventListener('click', () => {
+  const rect = atajosBtn.getBoundingClientRect();
+  atajosPanel.style.top = `${rect.bottom + window.scrollY}px`;
+  atajosPanel.style.left = `${rect.left + window.scrollX}px`;
   atajosPanel.classList.toggle('hidden');
 });
 
+toggleAtajosListBtn.addEventListener('click', () => {
+  if (atajosGuardadosList.style.display === 'block') {
+    atajosGuardadosList.style.display = 'none';
+    toggleAtajosListBtn.textContent = '📋 Ver atajos guardados';
+  } else {
+    atajosGuardadosList.style.display = 'block';
+    toggleAtajosListBtn.textContent = '❌ Ocultar atajos guardados';
+  }
+});
+
+// === Modo móvil ===
 toggleAppBtn?.addEventListener('click', () => {
   window.open('index.html', '_blank', 'width=540,height=720');
 });
