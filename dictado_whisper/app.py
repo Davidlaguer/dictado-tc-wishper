@@ -32,8 +32,8 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')
-def landing():
-    return app.send_static_file('landing.html')
+def root():
+    return app.send_static_file('dashboard.html')
 
 @app.route('/<path:filename>')
 def static_files(filename):

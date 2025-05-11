@@ -1,27 +1,20 @@
 // === Socket.IO ===
 const socket = io();
 
-// === DOM ELEMENTS ===
-const container        = document.getElementById('plugin-container');
-const dragBar          = document.getElementById('drag-bar');
-const micButton        = document.getElementById('mic-button');
+// === DOM Elements ===
+const micButton = document.getElementById('mic-button');
 const transcriptionBox = document.getElementById('transcription');
-const resetBtn         = document.getElementById('reset-btn');
-const generateBtn      = document.getElementById('generate-btn');
-const popup            = document.getElementById('popup');
-const popupContent     = document.getElementById('popup-content');
-const popupCopy        = document.getElementById('popup-copy');
-const popupClose       = document.getElementById('popup-close');
-
-// === Atajos DOM ===
-const crearAtajoBtn   = document.getElementById('crear-atajo-button');
-const atajoBtn        = document.getElementById('atajo-button');
-const toggleListBtn   = document.getElementById('toggle-atajos-list');
-const atajosList      = document.getElementById('atajos-guardados');
-
-// === Historial DOM ===
-const historialBtn    = document.getElementById('historial-button');
-const historialList   = document.getElementById('historial-list');
+const resetBtn = document.getElementById('reset-btn');
+const generateBtn = document.getElementById('generate-btn');
+const copyBtn = document.getElementById('copy-btn');
+const popupContent = document.getElementById('popup-content');
+const exportPdfBtn = document.getElementById('popup-pdf');
+const crearAtajoBtn = document.getElementById('crear-atajo-button');
+const atajoBtn = document.getElementById('atajo-button');
+const toggleListBtn = document.getElementById('toggle-atajos-list');
+const atajosList = document.getElementById('atajos-guardados');
+const historialBtn = document.getElementById('historial-button');
+const historialList = document.getElementById('historial-list');
 
 // === Persistence ===
 function saveAtajos(obj)        { localStorage.setItem('atajos', JSON.stringify(obj)); }
@@ -29,48 +22,12 @@ function loadAtajos()           { return JSON.parse(localStorage.getItem('atajos
 function saveHistorial(arr)     { localStorage.setItem('historial', JSON.stringify(arr)); }
 function loadHistorial()        { return JSON.parse(localStorage.getItem('historial') || '[]'); }
 
-// === State ===
 let isRecording = false, mediaRecorder;
 let atajos = loadAtajos();
 let historial = loadHistorial();
 
-// === Drag & Drop ===
-let dragging = false, startX, startY, origX, origY;
-function onStart(x, y) {
-  dragging = true;
-  startX = x; startY = y;
-  const r = container.getBoundingClientRect();
-  origX = r.left; origY = r.top;
-  document.body.style.userSelect = 'none';
-}
-function onMove(x, y) {
-  if (!dragging) return;
-  container.style.left = origX + (x - startX) + 'px';
-  container.style.top  = origY + (y - startY) + 'px';
-}
-function onEnd() {
-  dragging = false;
-  document.body.style.userSelect = '';
-}
-dragBar.addEventListener('mousedown', e => onStart(e.clientX, e.clientY));
-document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-document.addEventListener('mouseup', onEnd);
-dragBar.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY));
-document.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY));
-document.addEventListener('touchend', onEnd);
-
-// === Socket & Whisper ===
-socket.on('connect', () => console.log('🔗 Conectado a Whisper'));
-socket.on('transcription', ({ text }) => {
-  if (text) {
-    transcriptionBox.innerHTML += text + '<br>';
-    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-    sessionStorage.setItem('dictado', transcriptionBox.innerHTML);
-  }
-});
-
 // === Mic Control ===
-micButton.addEventListener('click', async () => {
+micButton?.addEventListener('click', async () => {
   if (!isRecording) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -93,11 +50,108 @@ micButton.addEventListener('click', async () => {
   }
 });
 
-// === Reset dictado ===
-resetBtn.addEventListener('click', () => {
+// === Transcripción en tiempo real ===
+socket.on('transcription', ({ text }) => {
+  if (text) {
+    transcriptionBox.innerHTML += text + '<br>';
+    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+    sessionStorage.setItem('dictado', transcriptionBox.innerHTML);
+  }
+});
+
+// === Nuevo dictado ===
+resetBtn?.addEventListener('click', () => {
   transcriptionBox.innerHTML = '';
   sessionStorage.removeItem('dictado');
 });
+
+// === Generar informe ===
+generateBtn?.addEventListener('click', async () => {
+  const dictado = transcriptionBox.textContent.trim();
+  if (!dictado) return alert('Dictado vacío.');
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Generando informe…';
+
+  try {
+    const res = await fetch('/informe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dictado })
+    });
+
+    const data = await res.json();
+    if (data.informe) {
+      popupContent.innerText = data.informe.trim();
+      guardarEnHistorial(data.informe.trim());
+    } else {
+      alert('⚠️ No se recibió ningún informe.');
+    }
+  } catch (e) {
+    alert('❌ Error de red: ' + e.message);
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generar informe';
+  }
+});
+
+// === Copiar ===
+copyBtn?.addEventListener('click', () => {
+  navigator.clipboard.writeText(transcriptionBox.textContent);
+});
+
+// === Exportar PDF ===
+exportPdfBtn?.addEventListener('click', () => {
+  const text = popupContent.innerText.trim();
+  const nombre = generarNombreInforme();
+
+  const blob = new Blob([text], { type: 'application/pdf' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = nombre;
+  link.click();
+});
+
+function generarNombreInforme() {
+  const now = new Date();
+  const fecha = now.toLocaleDateString('es-ES').replaceAll('/', '');
+  const hora = now.toLocaleTimeString('es-ES').replaceAll(':', '.');
+  return `informe_${fecha}_${hora}.pdf`;
+}
+
+// === Historial ===
+function renderHistorial() {
+  historialList.innerHTML = '';
+  historial.forEach((item, idx) => {
+    const li = document.createElement('li');
+    li.textContent = `[${item.fecha}]`;
+    li.style.cursor = 'pointer';
+    li.addEventListener('click', () => {
+      popupContent.innerText = item.texto;
+    });
+    const del = document.createElement('button');
+    del.textContent = '🗑';
+    del.addEventListener('click', () => {
+      historial.splice(idx, 1);
+      saveHistorial(historial);
+      renderHistorial();
+    });
+    li.appendChild(del);
+    historialList.appendChild(li);
+  });
+}
+
+function guardarEnHistorial(texto) {
+  const fecha = new Date().toLocaleString();
+  historial.unshift({ fecha, texto });
+  saveHistorial(historial);
+  renderHistorial();
+}
+
+historialBtn?.addEventListener('click', () => {
+  historialList.classList.toggle('show');
+});
+renderHistorial();
 
 // === Atajos ===
 function renderAtajos() {
@@ -116,7 +170,7 @@ function renderAtajos() {
     atajosList.appendChild(li);
   });
 }
-crearAtajoBtn.addEventListener('click', () => {
+crearAtajoBtn?.addEventListener('click', () => {
   const c = document.getElementById('atajo-clave').value.trim();
   const v = document.getElementById('atajo-valor').value.trim();
   if (!c || !v) return alert('Completa ambos campos');
@@ -127,11 +181,11 @@ crearAtajoBtn.addEventListener('click', () => {
   document.getElementById('atajo-clave').value = '';
   document.getElementById('atajo-valor').value = '';
 });
-atajoBtn.addEventListener('click', e => {
+atajoBtn?.addEventListener('click', e => {
   e.stopPropagation();
   document.getElementById('atajo-dropdown').classList.toggle('show');
 });
-toggleListBtn.addEventListener('click', () => {
+toggleListBtn?.addEventListener('click', () => {
   if (atajosList.style.display === 'block') {
     atajosList.style.display = 'none';
     toggleListBtn.textContent = '📋 Ver atajos guardados';
@@ -146,84 +200,3 @@ document.addEventListener('click', e => {
   }
 });
 renderAtajos();
-atajosList.style.display = 'none';
-toggleListBtn.textContent = '📋 Ver atajos guardados';
-
-// === Historial ===
-function renderHistorial() {
-  historialList.innerHTML = '';
-  historial.forEach((item, idx) => {
-    const li = document.createElement('li');
-    li.textContent = `[${item.fecha}] ${item.texto.slice(0,50)}…`;
-    const del = document.createElement('button');
-    del.textContent = '🗑';
-    del.addEventListener('click', () => {
-      historial.splice(idx, 1);
-      saveHistorial(historial);
-      renderHistorial();
-    });
-    li.appendChild(del);
-    historialList.appendChild(li);
-  });
-}
-historialBtn.addEventListener('click', () => {
-  historialList.classList.toggle('show');
-});
-function guardarEnHistorial(texto) {
-  const fecha = new Date().toLocaleString();
-  historial.unshift({ fecha, texto });
-  saveHistorial(historial);
-  renderHistorial();
-}
-renderHistorial();
-
-// === Generar informe ===
-generateBtn.addEventListener('click', async () => {
-  const dictado = transcriptionBox.textContent.trim();
-  if (!dictado) {
-    alert('Dictado vacío.');
-    return;
-  }
-
-  generateBtn.disabled = true;
-  generateBtn.textContent = 'Generando informe…';
-
-  try {
-    const res = await fetch('/informe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dictado })
-    });
-
-    const data = await res.json();
-    if (data.informe) {
-      popupContent.innerText = data.informe.trim();  // mostrar exactamente como viene
-      popup.style.display = 'block';
-      guardarEnHistorial(data.informe.trim());
-    } else {
-      alert('⚠️ No se recibió ningún informe.');
-    }
-
-  } catch (e) {
-    alert('❌ Error de red: ' + e.message);
-  } finally {
-    generateBtn.disabled = false;
-    generateBtn.textContent = 'Generar informe';
-  }
-});
-
-// === Popup handlers ===
-popupClose.addEventListener('click', () => { popup.style.display = 'none'; });
-popupCopy?.addEventListener('click', () => {
-  navigator.clipboard.writeText(popupContent.textContent);
-});
-
-// === Aplica atajos al texto
-function aplicarAtajos(txt) {
-  let out = txt;
-  Object.keys(atajos).forEach(k => {
-    const r = new RegExp(`\\b${k}\\b`, 'gi');
-    out = out.replace(r, atajos[k]);
-  });
-  return out;
-}
