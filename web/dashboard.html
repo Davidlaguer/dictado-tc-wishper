@@ -7,32 +7,39 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="dashboard">
-    <div class="dashboard-header">
+  <div class="dashboard-container">
+    <!-- Encabezado superior -->
+    <div class="top-bar">
       <h1>DICTADO INFORMES TC</h1>
-      <div class="dashboard-menu">
+      <div class="top-buttons">
         <button id="historial-button">📂 Historial</button>
         <button id="atajo-button">⚙️ Atajos</button>
-        <button onclick="window.open('index.html','popup','width=560,height=720')">📱 Modo app móvil</button>
-        <button onclick="alert('Cerrar sesión pendiente de implementar')">🔒 Cerrar sesión</button>
+        <button id="modo-app-button">📱 Modo app móvil</button>
+        <button id="logout-button">🔒 Cerrar sesión</button>
       </div>
     </div>
 
+    <!-- Área de dictado -->
     <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
-    <div id="transcription" contenteditable="true" placeholder="Aquí se dictan tus hallazgos TC..."></div>
+    <textarea id="transcription" placeholder="Ej. Modo plantillas. TC de abdomen..." rows="10"></textarea>
 
-    <div class="controls-row">
+    <!-- Botones de acción -->
+    <div class="action-buttons">
       <button id="mic-button">🎙️ Micrófono</button>
       <button id="generate-btn">Generar informe</button>
-      <button id="popup-copy">📋 Copiar</button>
+      <button id="copy-button">📋 Copiar</button>
       <button id="reset-btn">♻️ Nuevo dictado</button>
     </div>
 
-    <h3>INFORME GENERADO:</h3>
-    <div id="popup-content" class="informe-box"></div>
-    <button id="popup-pdf">Exportar PDF</button>
+    <!-- Resultado del informe -->
+    <label for="output">INFORME GENERADO:</label>
+    <textarea id="output" readonly rows="10"></textarea>
+    <button id="popup-pdf">📄 Exportar PDF</button>
 
-    <div id="historial-list" class="dropdown-content"></div>
+    <!-- Contenedor de historial -->
+    <ul id="historial-list" class="dropdown-content"></ul>
+
+    <!-- Contenedor de atajos -->
     <div id="atajo-dropdown" class="dropdown-content">
       <div id="atajo-formulario">
         <strong>➕ Nuevo atajo</strong><br>

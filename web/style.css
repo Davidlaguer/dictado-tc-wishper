@@ -1,168 +1,127 @@
-/* style.css */
-
-* {
-  box-sizing: border-box;
-}
+/* style.css (modo TouchBoard mejorado) */
 
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', sans-serif;
-  background: #f1f3f6;
+  background-color: #f4f6f8;
+  font-family: Arial, sans-serif;
 }
 
-/* === CONTAINER PRINCIPAL === */
-#plugin-container {
+.container {
   max-width: 900px;
   margin: 30px auto;
-  background: #fff;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
-  position: relative;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 24px 32px;
 }
 
-/* === MENÚ SUPERIOR === */
-.topbar {
+h1 {
+  text-align: left;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.menu {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
-.topbar h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.topbar .menu-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.menu-buttons button {
-  background: #f4f4f4;
-  border: 1px solid #ccc;
-  padding: 6px 12px;
+.menu button {
+  padding: 6px 14px;
   border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* === SECCIÓN DE DICTADO === */
-.label-section {
-  margin: 10px 0 6px;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-#transcription {
-  width: 100%;
-  min-height: 160px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px;
-  font-size: 16px;
-  background: #fefefe;
-  resize: vertical;
-  overflow-y: auto;
-}
-
-/* === BOTONES PRINCIPALES === */
-.button-group {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 20px 0;
-}
-
-.button-group button {
-  flex: 1 1 22%;
-  min-width: 130px;
-  padding: 12px;
-  font-size: 14px;
   border: none;
-  border-radius: 6px;
-  color: #fff;
-  background: #007bff;
+  background-color: #f0f0f0;
   cursor: pointer;
-  transition: background 0.2s;
 }
 
-.button-group button:hover {
-  background: #0056b3;
+.menu button:hover {
+  background-color: #e0e0e0;
 }
 
-/* === SALIDA DEL INFORME === */
-#output-label {
-  font-weight: bold;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
-
-#popup-content {
-  width: 100%;
-  min-height: 160px;
-  background: #fdfdfd;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px;
-  font-family: monospace;
-  white-space: pre-wrap;
-  overflow-y: auto;
-}
-
-/* === MENÚS DESPLEGABLES === */
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  z-index: 1000;
-}
-
-.dropdown-content.show {
+label {
   display: block;
-  margin-top: 6px;
-}
-
-#atajos-guardados,
-#historial-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-#atajos-guardados li,
-#historial-list li {
-  margin-bottom: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-#popup-copy, #popup-pdf {
-  margin-top: 10px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 5px;
   font-weight: bold;
-  cursor: pointer;
-  background: #28a745;
-  color: #fff;
+  margin-top: 20px;
+  margin-bottom: 8px;
 }
 
-#popup-pdf {
-  background: #17a2b8;
-  margin-left: 10px;
+textarea, #output {
+  width: 100%;
+  height: 180px;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 15px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.controls button {
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+button#mic-button {
+  background-color: #007bff;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+button#mic-button.active::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+button#generate-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+#historial-list, #atajo-dropdown {
+  margin-top: 10px;
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 14px;
+  display: none;
+}
+
+#historial-list.show, #atajo-dropdown.show {
+  display: block;
+}
+
+#output-label {
+  margin-top: 30px;
+  font-weight: bold;
 }
