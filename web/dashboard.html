@@ -18,24 +18,26 @@
       </div>
     </header>
 
-    <section class="input-section">
+    <section>
       <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
       <textarea id="transcription" placeholder="Ej. Modo plantillas. TC de abdomen..."></textarea>
       <div class="controls">
         <button id="mic-button">🎤 Micrófono</button>
         <button id="generate-btn">Generar informe</button>
-        <button id="copy-btn">📋 Copiar</button>
+        <button id="copy-input-btn">📋 Copiar</button>
         <button id="reset-btn">♻️ Nuevo dictado</button>
       </div>
     </section>
 
-    <section class="output-section">
+    <section>
       <label for="output">INFORME GENERADO:</label>
       <textarea id="output" readonly></textarea>
-      <button id="pdf-btn">🧾 Exportar PDF</button>
+      <div class="controls">
+        <button id="copy-btn">📋 Copiar</button>
+        <button id="pdf-btn">🧾 Exportar PDF</button>
+      </div>
     </section>
 
-    <!-- Popup (opcional, no activo por defecto) -->
     <div id="popup" class="popup hidden">
       <h3>INFORME GENERADO</h3>
       <pre id="popup-content"></pre>
@@ -43,7 +45,6 @@
       <button id="popup-close">Cerrar</button>
     </div>
 
-    <!-- Panel Atajos -->
     <div id="atajos-panel" class="dropdown-content hidden">
       <div>
         <strong>➕ Nuevo atajo</strong><br>
@@ -52,10 +53,10 @@
         <button id="add-atajo">Añadir atajo</button>
       </div>
       <hr>
+      <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
       <ul id="atajos-list"></ul>
     </div>
 
-    <!-- Historial -->
     <ul id="historial-list" class="dropdown-content hidden"></ul>
   </div>
 
@@ -63,4 +64,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
