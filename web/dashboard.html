@@ -11,14 +11,14 @@
     <header>
       <h1>DICTADO INFORMES TC</h1>
       <div class="menu-buttons">
-        <button id="historial-button">📁 Historial</button>
-        <button id="atajo-button">⚙️ Atajos</button>
-        <button id="modo-app-button">📱 Modo app móvil</button>
+        <button id="historial-btn">📁 Historial</button>
+        <button id="atajos-btn">⚙️ Atajos</button>
+        <button id="toggle-app">📱 Modo app móvil</button>
         <button id="logout-button">🔓 Cerrar sesión</button>
       </div>
     </header>
 
-    <section>
+    <section class="input-section">
       <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
       <textarea id="transcription" placeholder="Ej. Modo plantillas. TC de abdomen..."></textarea>
       <div class="controls">
@@ -29,12 +29,13 @@
       </div>
     </section>
 
-    <section>
+    <section class="output-section">
       <label for="output">INFORME GENERADO:</label>
       <textarea id="output" readonly></textarea>
-      <button id="popup-pdf">🧾 Exportar PDF</button>
+      <button id="pdf-btn">🧾 Exportar PDF</button>
     </section>
 
+    <!-- Popup (opcional, no activo por defecto) -->
     <div id="popup" class="popup hidden">
       <h3>INFORME GENERADO</h3>
       <pre id="popup-content"></pre>
@@ -42,18 +43,19 @@
       <button id="popup-close">Cerrar</button>
     </div>
 
-    <div id="atajo-dropdown" class="dropdown-content hidden">
+    <!-- Panel Atajos -->
+    <div id="atajos-panel" class="dropdown-content hidden">
       <div>
         <strong>➕ Nuevo atajo</strong><br>
-        <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
-        <input type="text" id="atajo-valor" placeholder="Texto sustituto">
-        <button id="crear-atajo-button">Añadir atajo</button>
+        <input type="text" id="clave" placeholder="Palabra a sustituir">
+        <input type="text" id="valor" placeholder="Texto sustituto">
+        <button id="add-atajo">Añadir atajo</button>
       </div>
       <hr>
-      <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
-      <ul id="atajos-guardados"></ul>
+      <ul id="atajos-list"></ul>
     </div>
 
+    <!-- Historial -->
     <ul id="historial-list" class="dropdown-content hidden"></ul>
   </div>
 
@@ -61,3 +63,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
