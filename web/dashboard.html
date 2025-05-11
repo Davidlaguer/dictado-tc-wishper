@@ -2,40 +2,37 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>DICTADO INFORMES TC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dictado Informes TC</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="dashboard-container">
-    <header>
+  <div class="dashboard">
+    <div class="dashboard-header">
       <h1>DICTADO INFORMES TC</h1>
-      <div class="menu-top">
-        <button id="historial-button">🗂️ Historial</button>
+      <div class="dashboard-menu">
+        <button id="historial-button">📂 Historial</button>
         <button id="atajo-button">⚙️ Atajos</button>
-        <button onclick="window.open('/index.html', '_blank', 'width=520,height=700')">🔄 Modo app móvil</button>
-        <button id="logout-button">🔓 Cerrar sesión</button>
+        <button onclick="window.open('index.html','popup','width=560,height=720')">📱 Modo app móvil</button>
+        <button onclick="alert('Cerrar sesión pendiente de implementar')">🔒 Cerrar sesión</button>
       </div>
-    </header>
+    </div>
 
-    <section>
-      <h2>DICTA AQUÍ LOS HALLAZGOS TC:</h2>
-      <div id="transcription" contenteditable="true" placeholder="Escribe o dicta aquí..."></div>
+    <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
+    <div id="transcription" contenteditable="true" placeholder="Aquí se dictan tus hallazgos TC..."></div>
 
-      <div class="action-buttons">
-        <button id="mic-button">🎤 Micrófono</button>
-        <button id="generate-btn">Generar informe</button>
-        <button id="copy-btn">📋 Copiar</button>
-        <button id="reset-btn">♻️ Nuevo dictado</button>
-      </div>
-    </section>
+    <div class="controls-row">
+      <button id="mic-button">🎙️ Micrófono</button>
+      <button id="generate-btn">Generar informe</button>
+      <button id="popup-copy">📋 Copiar</button>
+      <button id="reset-btn">♻️ Nuevo dictado</button>
+    </div>
 
-    <section>
-      <h2>INFORME GENERADO:</h2>
-      <pre id="popup-content"></pre>
-      <button id="popup-pdf">Exportar PDF</button>
-    </section>
+    <h3>INFORME GENERADO:</h3>
+    <div id="popup-content" class="informe-box"></div>
+    <button id="popup-pdf">Exportar PDF</button>
 
-    <!-- Dropdowns -->
+    <div id="historial-list" class="dropdown-content"></div>
     <div id="atajo-dropdown" class="dropdown-content">
       <div id="atajo-formulario">
         <strong>➕ Nuevo atajo</strong><br>
@@ -47,10 +44,9 @@
       <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
       <ul id="atajos-guardados" style="display:none;"></ul>
     </div>
-    <ul id="historial-list" class="dropdown-content"></ul>
-
-    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
-    <script src="script.js"></script>
   </div>
+
+  <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

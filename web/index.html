@@ -6,75 +6,46 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <div id="plugin-container">
-    <!-- Pestañita de arrastre -->
-    <div id="drag-bar"></div>
-
-    <!-- Transcripción en tiempo real -->
-    <div
-      id="transcription"
-      contenteditable="true"
-      placeholder="Aquí se dictan tus hallazgos TC…">
-    </div>
-
-    <!-- Botón Micrófono con SVG -->
-    <div class="center-controls">
-      <button id="mic-button" aria-label="Micrófono">
-        <svg xmlns="http://www.w3.org/2000/svg"
-             width="32" height="32"
-             viewBox="0 0 24 24"
-             fill="white">
-          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 19.93V22h2v-2.07a8.001
-                   8.001 0 0 0 6.93-6.93H18a6 6 0 0 1-12 0H4.07A8.001
-                   8.001 0 0 0 11 19.93z"/>
-        </svg>
-      </button>
-    </div>
-
-    <!-- ✅ Botón Generar Informe -->
-    <div class="main-action">
-      <button id="generate-btn">Generar informe</button>
-    </div>
-
-    <!-- Controles secundarios: Nuevo dictado / Atajos / Historial -->
-    <div class="secondary-actions">
-      <!-- 1) Botón Nuevo dictado -->
-      <button id="reset-btn">♻️ Nuevo dictado</button>
-
-      <!-- 2) Menú Atajos -->
-      <div class="dropdown">
+  <div class="dashboard">
+    <header>
+      <h1>DICTADO INFORMES TC</h1>
+      <div class="menu-buttons">
+        <button id="historial-button">📁 Historial</button>
         <button id="atajo-button">⚙️ Atajos</button>
-        <div id="atajo-dropdown" class="dropdown-content">
-          <!-- Formulario atajos -->
-          <div id="atajo-formulario">
-            <strong>➕ Nuevo atajo</strong><br>
-            <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
-            <input type="text" id="atajo-valor" placeholder="Texto sustituto">
-            <button id="crear-atajo-button">Añadir atajo</button>
-          </div>
-          <hr>
-          <!-- Toggle lista atajos -->
-          <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
-          <!-- Lista de atajos -->
-          <ul id="atajos-guardados" style="display:none;"></ul>
-        </div>
+        <button id="modo-app">📱 Modo app móvil</button>
+        <button id="logout">🔒 Cerrar sesión</button>
+      </div>
+    </header>
+
+    <main>
+      <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
+      <div id="transcription" contenteditable="true" placeholder="Dicta aquí tus hallazgos TC..."></div>
+
+      <div class="action-row">
+        <button id="mic-button">🎤 Micrófono</button>
+        <button id="generate-btn">Generar informe</button>
+        <button id="copy-btn">📋 Copiar</button>
+        <button id="reset-btn">♻️ Nuevo dictado</button>
       </div>
 
-      <!-- 3) Menú Historial -->
-      <div class="dropdown">
-        <button id="historial-button">🗂️ Historial</button>
-        <ul id="historial-list" class="dropdown-content"></ul>
-      </div>
-    </div>
+      <h2>INFORME GENERADO:</h2>
+      <div id="popup-content" class="output"></div>
+      <button id="popup-pdf">📄 Exportar PDF</button>
+    </main>
 
-    <!-- Popup Informe -->
-    <div id="popup">
-      <h3>INFORME GENERADO</h3>
-      <pre id="popup-content"></pre>
-      <button id="popup-copy">Copiar</button>
-      <button id="popup-pdf">Exportar PDF</button>
-      <button id="popup-close">Cerrar</button>
+    <!-- Dropdowns ocultos -->
+    <div id="historial-list" class="dropdown-content"></div>
+
+    <div id="atajo-dropdown" class="dropdown-content">
+      <div id="atajo-formulario">
+        <strong>➕ Nuevo atajo</strong><br>
+        <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
+        <input type="text" id="atajo-valor" placeholder="Texto sustituto">
+        <button id="crear-atajo-button">Añadir atajo</button>
+      </div>
+      <hr>
+      <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
+      <ul id="atajos-guardados" style="display:none;"></ul>
     </div>
   </div>
 

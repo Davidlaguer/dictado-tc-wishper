@@ -1,33 +1,36 @@
-// === Socket.IO ===
+// === script.js actualizado ===
+
 const socket = io();
 
-// === DOM Elements ===
-const micButton = document.getElementById('mic-button');
+// === Elementos DOM ===
 const transcriptionBox = document.getElementById('transcription');
-const resetBtn = document.getElementById('reset-btn');
+const micButton = document.getElementById('mic-button');
 const generateBtn = document.getElementById('generate-btn');
+const resetBtn = document.getElementById('reset-btn');
 const copyBtn = document.getElementById('copy-btn');
-const popupContent = document.getElementById('popup-content');
-const exportPdfBtn = document.getElementById('popup-pdf');
-const crearAtajoBtn = document.getElementById('crear-atajo-button');
-const atajoBtn = document.getElementById('atajo-button');
-const toggleListBtn = document.getElementById('toggle-atajos-list');
-const atajosList = document.getElementById('atajos-guardados');
-const historialBtn = document.getElementById('historial-button');
+const pdfBtn = document.getElementById('pdf-btn');
+const outputBox = document.getElementById('output');
+const historialBtn = document.getElementById('historial-btn');
 const historialList = document.getElementById('historial-list');
+const atajosBtn = document.getElementById('atajos-btn');
+const atajosPanel = document.getElementById('atajos-panel');
+const toggleAppBtn = document.getElementById('toggle-app');
 
-// === Persistence ===
-function saveAtajos(obj)        { localStorage.setItem('atajos', JSON.stringify(obj)); }
-function loadAtajos()           { return JSON.parse(localStorage.getItem('atajos') || '{}'); }
-function saveHistorial(arr)     { localStorage.setItem('historial', JSON.stringify(arr)); }
-function loadHistorial()        { return JSON.parse(localStorage.getItem('historial') || '[]'); }
+let isRecording = false;
+let mediaRecorder;
+let historial = JSON.parse(localStorage.getItem('historial') || '[]');
+let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 
-let isRecording = false, mediaRecorder;
-let atajos = loadAtajos();
-let historial = loadHistorial();
+// === Inicialización ===
+document.addEventListener('DOMContentLoaded', () => {
+  historialList.style.display = 'none';
+  atajosPanel.style.display = 'none';
+  renderHistorial();
+  renderAtajos();
+});
 
-// === Mic Control ===
-micButton?.addEventListener('click', async () => {
+// === Micrófono ===
+micButton.addEventListener('click', async () => {
   if (!isRecording) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -41,37 +44,29 @@ micButton?.addEventListener('click', async () => {
         }
       };
       mediaRecorder.onstart = () => { micButton.classList.add('active'); isRecording = true; };
-      mediaRecorder.onstop  = () => { micButton.classList.remove('active'); isRecording = false; };
-    } catch (err) {
-      alert('Error accediendo al micrófono: ' + err.message);
+      mediaRecorder.onstop = () => { micButton.classList.remove('active'); isRecording = false; };
+    } catch (e) {
+      alert('Error con el micrófono: ' + e.message);
     }
   } else {
     mediaRecorder.stop();
   }
 });
 
-// === Transcripción en tiempo real ===
 socket.on('transcription', ({ text }) => {
   if (text) {
-    transcriptionBox.innerHTML += text + '<br>';
+    transcriptionBox.value += text + ' ';
     transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-    sessionStorage.setItem('dictado', transcriptionBox.innerHTML);
   }
 });
 
-// === Nuevo dictado ===
-resetBtn?.addEventListener('click', () => {
-  transcriptionBox.innerHTML = '';
-  sessionStorage.removeItem('dictado');
-});
-
 // === Generar informe ===
-generateBtn?.addEventListener('click', async () => {
-  const dictado = transcriptionBox.textContent.trim();
-  if (!dictado) return alert('Dictado vacío.');
+generateBtn.addEventListener('click', async () => {
+  const dictado = transcriptionBox.value.trim();
+  if (!dictado) return alert('Dictado vacío');
 
   generateBtn.disabled = true;
-  generateBtn.textContent = 'Generando informe…';
+  generateBtn.textContent = 'Generando…';
 
   try {
     const res = await fetch('/informe', {
@@ -79,61 +74,67 @@ generateBtn?.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dictado })
     });
-
     const data = await res.json();
+
     if (data.informe) {
-      popupContent.innerText = data.informe.trim();
-      guardarEnHistorial(data.informe.trim());
+      outputBox.value = data.informe.trim();
+      guardarInforme(data.informe);
     } else {
-      alert('⚠️ No se recibió ningún informe.');
+      alert('Error generando informe.');
     }
   } catch (e) {
-    alert('❌ Error de red: ' + e.message);
+    alert('Error del servidor: ' + e.message);
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generar informe';
   }
 });
 
-// === Copiar ===
-copyBtn?.addEventListener('click', () => {
-  navigator.clipboard.writeText(transcriptionBox.textContent);
+// === Copiar informe ===
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(outputBox.value.trim());
+});
+
+// === Reset ===
+resetBtn.addEventListener('click', () => {
+  transcriptionBox.value = '';
+  outputBox.value = '';
 });
 
 // === Exportar PDF ===
-exportPdfBtn?.addEventListener('click', () => {
-  const text = popupContent.innerText.trim();
-  const nombre = generarNombreInforme();
-
-  const blob = new Blob([text], { type: 'application/pdf' });
+pdfBtn.addEventListener('click', () => {
+  const texto = outputBox.value.trim();
+  if (!texto) return;
+  const blob = new Blob([texto], { type: 'application/pdf' });
   const link = document.createElement('a');
+  const fecha = new Date();
+  const nombre = `informe_${fecha.getFullYear()}${(fecha.getMonth()+1).toString().padStart(2,'0')}${fecha.getDate().toString().padStart(2,'0')}_${fecha.toTimeString().slice(0,8).replace(/:/g, '.')}.pdf`;
   link.href = URL.createObjectURL(blob);
   link.download = nombre;
   link.click();
 });
 
-function generarNombreInforme() {
-  const now = new Date();
-  const fecha = now.toLocaleDateString('es-ES').replaceAll('/', '');
-  const hora = now.toLocaleTimeString('es-ES').replaceAll(':', '.');
-  return `informe_${fecha}_${hora}.pdf`;
+// === Guardar historial ===
+function guardarInforme(texto) {
+  const fecha = new Date().toLocaleString();
+  historial.unshift({ fecha, texto });
+  localStorage.setItem('historial', JSON.stringify(historial));
+  renderHistorial();
 }
 
-// === Historial ===
 function renderHistorial() {
   historialList.innerHTML = '';
-  historial.forEach((item, idx) => {
+  historial.forEach(({ fecha, texto }, i) => {
     const li = document.createElement('li');
-    li.textContent = `[${item.fecha}]`;
-    li.style.cursor = 'pointer';
+    li.textContent = `[${fecha}]`; // Mostrar solo título
     li.addEventListener('click', () => {
-      popupContent.innerText = item.texto;
+      outputBox.value = texto;
     });
     const del = document.createElement('button');
     del.textContent = '🗑';
     del.addEventListener('click', () => {
-      historial.splice(idx, 1);
-      saveHistorial(historial);
+      historial.splice(i, 1);
+      localStorage.setItem('historial', JSON.stringify(historial));
       renderHistorial();
     });
     li.appendChild(del);
@@ -141,62 +142,45 @@ function renderHistorial() {
   });
 }
 
-function guardarEnHistorial(texto) {
-  const fecha = new Date().toLocaleString();
-  historial.unshift({ fecha, texto });
-  saveHistorial(historial);
-  renderHistorial();
-}
-
-historialBtn?.addEventListener('click', () => {
-  historialList.classList.toggle('show');
+// === Toggle historial ===
+historialBtn.addEventListener('click', () => {
+  historialList.style.display = historialList.style.display === 'none' ? 'block' : 'none';
 });
-renderHistorial();
 
 // === Atajos ===
 function renderAtajos() {
-  atajosList.innerHTML = '';
-  Object.entries(atajos).forEach(([clave, valor]) => {
+  const ul = document.getElementById('atajos-list');
+  ul.innerHTML = '';
+  Object.entries(atajos).forEach(([k, v]) => {
     const li = document.createElement('li');
-    li.textContent = `${clave} → ${valor}`;
-    const del = document.createElement('button');
-    del.textContent = '🗑';
-    del.addEventListener('click', () => {
-      delete atajos[clave];
-      saveAtajos(atajos);
+    li.textContent = `${k} → ${v}`;
+    const b = document.createElement('button');
+    b.textContent = '🗑';
+    b.onclick = () => {
+      delete atajos[k];
+      localStorage.setItem('atajos', JSON.stringify(atajos));
       renderAtajos();
-    });
-    li.appendChild(del);
-    atajosList.appendChild(li);
+    };
+    li.appendChild(b);
+    ul.appendChild(li);
   });
 }
-crearAtajoBtn?.addEventListener('click', () => {
-  const c = document.getElementById('atajo-clave').value.trim();
-  const v = document.getElementById('atajo-valor').value.trim();
-  if (!c || !v) return alert('Completa ambos campos');
-  if (atajos[c]) return alert('Esa clave ya existe');
-  atajos[c] = v;
-  saveAtajos(atajos);
+
+document.getElementById('add-atajo').addEventListener('click', () => {
+  const clave = document.getElementById('clave').value.trim();
+  const valor = document.getElementById('valor').value.trim();
+  if (!clave || !valor) return alert('Completa ambos campos');
+  if (atajos[clave]) return alert('Esa clave ya existe');
+  atajos[clave] = valor;
+  localStorage.setItem('atajos', JSON.stringify(atajos));
   renderAtajos();
-  document.getElementById('atajo-clave').value = '';
-  document.getElementById('atajo-valor').value = '';
 });
-atajoBtn?.addEventListener('click', e => {
-  e.stopPropagation();
-  document.getElementById('atajo-dropdown').classList.toggle('show');
+
+atajosBtn.addEventListener('click', () => {
+  atajosPanel.style.display = atajosPanel.style.display === 'none' ? 'block' : 'none';
 });
-toggleListBtn?.addEventListener('click', () => {
-  if (atajosList.style.display === 'block') {
-    atajosList.style.display = 'none';
-    toggleListBtn.textContent = '📋 Ver atajos guardados';
-  } else {
-    atajosList.style.display = 'block';
-    toggleListBtn.textContent = '❌ Ocultar atajos guardados';
-  }
+
+// === Modo móvil ===
+toggleAppBtn?.addEventListener('click', () => {
+  window.open('index.html', '_blank', 'width=540,height=720');
 });
-document.addEventListener('click', e => {
-  if (!document.getElementById('atajo-dropdown').contains(e.target) && e.target !== atajoBtn) {
-    document.getElementById('atajo-dropdown').classList.remove('show');
-  }
-});
-renderAtajos();
