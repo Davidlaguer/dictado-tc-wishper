@@ -21,6 +21,7 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   width: 800px;
   max-width: 95vw;
+  position: relative;
 }
 
 header {
@@ -39,6 +40,7 @@ header h1 {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 button {
@@ -98,22 +100,12 @@ textarea {
   color: white;
 }
 
-#popup-pdf {
-  background-color: #28a745;
-  color: white;
-  margin-top: 8px;
-}
-
-#popup-copy {
-  background-color: #17a2b8;
-  color: white;
-}
-
-#popup-close {
+#popup-close-btn {
   background-color: #dc3545;
   color: white;
 }
 
+/* === POPUP BASE === */
 .popup {
   display: none;
   position: fixed;
@@ -133,11 +125,24 @@ textarea {
   overflow-y: auto;
   white-space: pre-wrap;
 }
-.dropdown {
-  position: relative;
+
+/* === POPUP: botones internos === */
+.popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+.popup-buttons button {
+  padding: 6px 12px;
 }
 
-/* === CORRECCIÓN MENÚS DESPLEGABLES === */
+/* === POPUP VISIBILIDAD === */
+.popup.show {
+  display: block;
+}
+
+/* === MENÚS DESPLEGABLES === */
 .dropdown {
   position: relative;
 }
@@ -146,19 +151,37 @@ textarea {
   position: absolute;
   top: 100%;
   left: 0;
-  background: #fff;
+  background: white;
   border: 1px solid #ccc;
   padding: 12px;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   display: none;
-  z-index: 1000;
+  z-index: 3000;
+  min-width: 220px;
 }
 
 .dropdown-content.show {
   display: block;
 }
 
+/* Nuevas reglas para listas internas */
+.dropdown-content ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dropdown-content ul li {
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.dropdown-content ul li:hover {
+  background-color: #eee;
+}
+
+/* Mantengo estas reglas tal cual estaban */
 #historial-list li,
 #atajos-guardados li {
   list-style: none;
@@ -184,7 +207,4 @@ textarea {
   .controls {
     flex-direction: column;
   }
-}
-.hidden {
-  display: none !important;
 }

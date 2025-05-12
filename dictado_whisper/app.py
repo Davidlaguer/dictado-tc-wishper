@@ -94,8 +94,10 @@ def generar_informe():
         else:
             return jsonify(error="Tiempo de espera excedido (timeout)"), 504
 
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
-        respuesta = messages.data[0].content[0].text.value.strip()
+        # — Cambio clave: filtrar mensajes de assistant —
+        msgs = client.beta.threads.messages.list(thread_id=thread.id).data
+        assistant_msgs = [m for m in msgs if m.author.role == "assistant"]
+        respuesta = assistant_msgs[-1].content[0].text.value.strip()
         print("📄 Informe recibido:", respuesta)
         return jsonify(informe=respuesta)
 
@@ -107,3 +109,4 @@ if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
     print(f"🔥 Servidor iniciado en puerto {port}")
     socketio.run(app, host='0.0.0.0', port=port)
+

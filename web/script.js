@@ -7,8 +7,7 @@ const micButton = document.getElementById('mic-button');
 const generateBtn = document.getElementById('generate-btn');
 const resetBtn = document.getElementById('reset-btn');
 const copyBtn = document.getElementById('copy-btn');
-const pdfBtn = document.getElementById('pdf-btn');
-const outputBox = document.getElementById('output');
+// 🔴 Ya no buscamos ni usamos pdfBtn ni outputBox ni copy-output-btn
 const historialBtn = document.getElementById('historial-button');
 const historialList = document.getElementById('historial-list');
 const atajosBtn = document.getElementById('atajo-button');
@@ -18,6 +17,12 @@ const addAtajoBtn = document.getElementById('crear-atajo-button');
 const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
 
+// 🟢 Referencias al nuevo popup
+const popup = document.getElementById('popup');
+const popupContent = document.getElementById('popup-content');
+const popupCopyBtn = document.getElementById('popup-copy-btn');
+const popupCloseBtn = document.getElementById('popup-close-btn');
+
 let isRecording = false;
 let mediaRecorder;
 let historial = JSON.parse(localStorage.getItem('historial') || '[]');
@@ -25,8 +30,6 @@ let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 
 // === Inicialización ===
 document.addEventListener('DOMContentLoaded', () => {
-  historialList.style.display = 'none';
-  atajosPanel.classList.add('hidden');
   renderHistorial();
   renderAtajos();
 });
@@ -80,8 +83,10 @@ generateBtn.addEventListener('click', async () => {
     const data = await res.json();
 
     if (data.informe) {
-      outputBox.value = data.informe.trim();
+      // 🟢 En lugar de volcar al textarea, abrimos el popup
+      popupContent.textContent = data.informe.trim();
       guardarInforme(data.informe);
+      popup.classList.add('show');
     } else {
       alert('Error generando informe.');
     }
@@ -93,34 +98,25 @@ generateBtn.addEventListener('click', async () => {
   }
 });
 
-// === Copiar dictado e informe ===
+// === Copiar dictado ===
 copyBtn.addEventListener('click', () => {
   transcriptionBox.select();
   document.execCommand('copy');
 });
 
-document.getElementById('popup-copy').addEventListener('click', () => {
-  outputBox.select();
-  document.execCommand('copy');
+// === Copiar desde el popup ===
+popupCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(popupContent.textContent);
+});
+
+// === Cerrar popup ===
+popupCloseBtn.addEventListener('click', () => {
+  popup.classList.remove('show');
 });
 
 // === Reset ===
 resetBtn.addEventListener('click', () => {
   transcriptionBox.value = '';
-  outputBox.value = '';
-});
-
-// === Exportar PDF ===
-pdfBtn.addEventListener('click', () => {
-  const texto = outputBox.value.trim();
-  if (!texto) return;
-  const blob = new Blob([texto], { type: 'application/pdf' });
-  const link = document.createElement('a');
-  const fecha = new Date();
-  const nombre = `informe_${fecha.getFullYear()}${(fecha.getMonth()+1).toString().padStart(2,'0')}${fecha.getDate().toString().padStart(2,'0')}_${fecha.toTimeString().slice(0,8).replace(/:/g, '.')}.pdf`;
-  link.href = URL.createObjectURL(blob);
-  link.download = nombre;
-  link.click();
 });
 
 // === Historial ===
@@ -136,7 +132,11 @@ function renderHistorial() {
   historial.forEach(({ fecha, texto }, i) => {
     const li = document.createElement('li');
     li.textContent = `[${fecha}]`;
-    li.addEventListener('click', () => outputBox.value = texto);
+    // 🟢 Al hacer clic en un elemento del historial, lo mostramos en el popup
+    li.addEventListener('click', () => {
+      popupContent.textContent = texto;
+      popup.classList.add('show');
+    });
     const del = document.createElement('button');
     del.textContent = '🗑';
     del.addEventListener('click', () => {
@@ -149,11 +149,12 @@ function renderHistorial() {
   });
 }
 
-historialBtn.addEventListener('click', () => {
-  const visible = historialList.classList.toggle('show');
+historialBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
   const rect = historialBtn.getBoundingClientRect();
   historialList.style.top = `${rect.bottom + window.scrollY}px`;
   historialList.style.left = `${rect.left + window.scrollX}px`;
+  historialList.classList.toggle('show');
 });
 
 // === Atajos ===
@@ -162,14 +163,14 @@ function renderAtajos() {
   Object.entries(atajos).forEach(([k, v]) => {
     const li = document.createElement('li');
     li.textContent = `${k} → ${v}`;
-    const b = document.createElement('button');
-    b.textContent = '🗑';
-    b.onclick = () => {
+    const btn = document.createElement('button');
+    btn.textContent = '🗑';
+    btn.onclick = () => {
       delete atajos[k];
       localStorage.setItem('atajos', JSON.stringify(atajos));
       renderAtajos();
     };
-    li.appendChild(b);
+    li.appendChild(btn);
     atajosGuardadosList.appendChild(li);
   });
 }
@@ -184,11 +185,12 @@ addAtajoBtn.addEventListener('click', () => {
   renderAtajos();
 });
 
-atajosBtn.addEventListener('click', () => {
+atajosBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
   const rect = atajosBtn.getBoundingClientRect();
   atajosPanel.style.top = `${rect.bottom + window.scrollY}px`;
   atajosPanel.style.left = `${rect.left + window.scrollX}px`;
-  atajosPanel.classList.toggle('hidden');
+  atajosPanel.classList.toggle('show');
 });
 
 toggleAtajosListBtn.addEventListener('click', () => {
@@ -201,7 +203,14 @@ toggleAtajosListBtn.addEventListener('click', () => {
   }
 });
 
+// === Cerrar dropdowns al hacer clic fuera ===
+document.addEventListener('click', () => {
+  historialList.classList.remove('show');
+  atajosPanel.classList.remove('show');
+});
+
 // === Modo móvil ===
 toggleAppBtn?.addEventListener('click', () => {
   window.open('index.html', '_blank', 'width=540,height=720');
 });
+

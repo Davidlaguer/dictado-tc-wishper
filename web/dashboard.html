@@ -40,17 +40,19 @@
       <div class="controls">
         <button id="mic-button">🎤 Micrófono</button>
         <button id="generate-btn">Generar informe</button>
-        <button id="copy-btn">📋 Copiar</button>
+        <button id="copy-btn">📋 Copiar dictado</button>
         <button id="reset-btn">♻️ Nuevo dictado</button>
       </div>
     </section>
+  </div>
 
-    <section>
-      <label for="output">INFORME GENERADO:</label>
-      <textarea id="output" readonly></textarea>
-      <button id="pdf-btn">📜 Exportar PDF</button>
-      <button id="copy-output-btn">📋 Copiar</button>
-    </section>
+  <!-- POPUP PARA EL INFORME -->
+  <div id="popup" class="popup">
+    <pre id="popup-content"></pre>
+    <div class="popup-buttons">
+      <button id="popup-copy-btn">📋 Copiar informe</button>
+      <button id="popup-close-btn">✖️ Cerrar</button>
+    </div>
   </div>
 
   <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
