@@ -35,13 +35,14 @@ header {
 
 header h1 {
   font-size: 24px;
-+ margin-bottom: 12px;
++ margin-bottom: 24px;
 }
 
 /* separa el label del textarea */
 label[for="transcription"] {
   display: block;
   margin-bottom: 12px;
+}
 
 /* === TOOLBAR BUTTONS === */
 .menu-buttons {
@@ -186,6 +187,7 @@ button:hover {
   position: absolute;
   top: 100%;    /* pegado justo debajo del botón */
   left: 0;      /* alineado izquierda con el botón */
+  transform: none;
   background: white;
   border: 1px solid #ccc;
   padding: 12px;
