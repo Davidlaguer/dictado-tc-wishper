@@ -24,7 +24,6 @@ body {
   position: relative;
 }
 
-/* ↑ Aumentado de 20px a 24px para mayor separación */
 /* === HEADER === */
 header {
   display: flex;
@@ -36,6 +35,12 @@ header {
 
 header h1 {
   font-size: 24px;
+}
+
+/* separa el label del textarea */
+label[for="transcription"] {
+  display: block;
+  margin-bottom: 12px;
 }
 
 /* === TOOLBAR BUTTONS === */
@@ -62,7 +67,7 @@ header h1 {
 /* === TEXTAREA DE DICTADO === */
 textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 360px; /* duplicada de 120px a 240px */
   padding: 12px;
   font-size: 16px;
   border: 1px solid #ccc;
@@ -179,9 +184,8 @@ button:hover {
 
 .dropdown-content {
   position: absolute;
-  top: calc(100% + 6px);  /* baja 6px más */
-  left: 50%;
-  transform: translateX(-50%);
+  top: 100%;    /* pegado justo debajo del botón */
+  left: 0;      /* alineado izquierda con el botón */
   background: white;
   border: 1px solid #ccc;
   padding: 12px;
@@ -197,10 +201,16 @@ button:hover {
   content: "";
   position: absolute;
   top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 16px;  /* alineado hacia la izquierda del botón */
   border: 6px solid transparent;
   border-bottom-color: white;
+}
+
+/* alinea inputs y botón en línea */
+.dropdown-content .new-atajo-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .dropdown-content.show {
