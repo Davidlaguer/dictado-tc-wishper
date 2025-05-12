@@ -18,29 +18,27 @@ if not api_key:
     raise RuntimeError("🔑 La variable OPENAI_API_KEY no está definida en el entorno")
 print("✅ OPENAI_API_KEY detectada ✅")
 
-+
-+# — TEST DE CONEXIÓN A OPENAI —
-+try:
-+    test_client = OpenAI(api_key=api_key)
-+    models = test_client.models.list()
-+    print("✅ Conexión a OpenAI OK. Ejemplo modelos:", [m.id for m in models.data][:3])
-+except Exception as e:
-+    print("❌ Error al conectar a OpenAI:", e)
-+    raise
+# — TEST DE CONEXIÓN A OPENAI —
+try:
+    test_client = OpenAI(api_key=api_key)
+    models = test_client.models.list()
+    print("✅ Conexión a OpenAI OK. Ejemplo modelos:", [m.id for m in models.data][:3])
+except Exception as e:
+    print("❌ Error al conectar a OpenAI:", e)
+    raise
 
 # — Cliente OpenAI —
 client = OpenAI(api_key=api_key)
 assistant_id = "asst_fgKQWIHbzkBVc93SOD6iSYTh"
 
-+# — Endpoint de salud para verificar conexión —
-+@app.route('/health')
-+def health():
-+    try:
-+        client.models.list()
-+        return "OK", 200
-+    except Exception as e:
-+        return f"ERROR: {e}", 500
-
+# — Endpoint de salud para verificar conexión —
+@app.route('/health')
+def health():
+    try:
+        client.models.list()
+        return "OK", 200
+    except Exception as e:
+        return f"ERROR: {e}", 500
 # — App Flask —
 app = Flask(
     __name__,
