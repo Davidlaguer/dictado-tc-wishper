@@ -2,6 +2,7 @@ import os
 import tempfile
 import subprocess
 import time
+import traceback
 from dotenv import load_dotenv
 
 from flask import Flask, request, jsonify
@@ -18,11 +19,11 @@ if not api_key:
     raise RuntimeError("🔑 La variable OPENAI_API_KEY no está definida en el entorno")
 print("✅ OPENAI_API_KEY detectada ✅")
 
-# — TEST DE CONEXIÓN A OPENAI —
+# — Test de conexión a OpenAI —
 try:
     test_client = OpenAI(api_key=api_key)
-    models = test_client.models.list()
-    print("✅ Conexión a OpenAI OK. Ejemplo modelos:", [m.id for m in models.data][:3])
+    m = test_client.models.list().data[:3]
+    print("✅ Conexión a OpenAI OK. Modelos:", [x.id for x in m])
 except Exception as e:
     print("❌ Error al conectar a OpenAI:", e)
     raise
@@ -31,14 +32,6 @@ except Exception as e:
 client = OpenAI(api_key=api_key)
 assistant_id = "asst_fgKQWIHbzkBVc93SOD6iSYTh"
 
-# — Endpoint de salud para verificar conexión —
-@app.route('/health')
-def health():
-    try:
-        client.models.list()
-        return "OK", 200
-    except Exception as e:
-        return f"ERROR: {e}", 500
 # — App Flask —
 app = Flask(
     __name__,
@@ -47,6 +40,15 @@ app = Flask(
 )
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# — Endpoint de salud —
+@app.route('/health')
+def health():
+    try:
+        client.models.list()
+        return "OK", 200
+    except Exception as e:
+        return f"ERROR: {e}", 500
 
 @app.route('/')
 def root():
@@ -103,25 +105,27 @@ def generar_informe():
         # Esperar a que termine (máx 30s)
         for _ in range(30):
             time.sleep(2)
-            run_status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-            if run_status.status == "completed":
+            status = client.beta.threads.runs.retrieve(
+                thread_id=thread.id, run_id=run.id
+            ).status
+            if status == "completed":
                 break
-            elif run_status.status in ["failed", "cancelled", "expired"]:
-                return jsonify(error=f"Assistant falló: {run_status.status}"), 500
+            if status in ["failed", "cancelled", "expired"]:
+                return jsonify(error=f"Assistant falló: {status}"), 500
         else:
             return jsonify(error="Tiempo de espera excedido (timeout)"), 504
 
-# — Cambio clave: filtrar mensajes de assistant —
+        # Filtrar solo mensajes de assistant
         msgs = client.beta.threads.messages.list(thread_id=thread.id).data
         assistant_msgs = [m for m in msgs if m.author.role == "assistant"]
         respuesta = assistant_msgs[-1].content[0].text.value.strip()
+
         print("📄 Informe recibido:", respuesta)
         return jsonify(informe=respuesta)
 
     except Exception as e:
-        import traceback
         tb = traceback.format_exc()
-        print("❌ Exception during /informe:\n" + tb)
+        print("❌ Exception during /informe:\n", tb)
         return jsonify(error="Error interno del servidor"), 500
 
 if __name__ == '__main__':
