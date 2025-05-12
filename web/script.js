@@ -68,6 +68,7 @@ generateBtn.addEventListener('click', async () => {
   if (!dictado) return alert('Dictado vacío');
   generateBtn.disabled = true;
   generateBtn.textContent = 'Generando…';
+
   try {
     const res = await fetch('/informe', {
       method: 'POST',
@@ -75,15 +76,17 @@ generateBtn.addEventListener('click', async () => {
       body: JSON.stringify({ dictado })
     });
     const data = await res.json();
-    if (data.informe) {
-      popupContent.textContent = data.informe.trim();
-      guardarInforme(data.informe);
-      popup.classList.add('show');
-    } else {
-      alert('Error generando informe.');
+
+    if (!res.ok) {
+      // Mostrar el error completo que viene del servidor
+      return alert('Error generando informe:\n' + data.error);
     }
+    // si todo bien:
+    popupContent.textContent = data.informe.trim();
+    guardarInforme(data.informe);
+    popup.classList.add('show');
   } catch (e) {
-    alert('Error del servidor: ' + e.message);
+    alert('Error de red: ' + e.message);
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generar informe';
