@@ -35,6 +35,7 @@ header {
 
 header h1 {
   font-size: 24px;
++ margin-bottom: 12px;
 }
 
 /* separa el label del textarea */
@@ -67,7 +68,7 @@ label[for="transcription"] {
 /* === TEXTAREA DE DICTADO === */
 textarea {
   width: 100%;
-  min-height: 360px; /* duplicada de 120px a 240px */
+  min-height: px; /* duplicada de 120px a 240px */
   padding: 12px;
   font-size: 16px;
   border: 1px solid #ccc;

@@ -132,7 +132,6 @@ function renderHistorial() {
   historial.forEach(({ fecha, texto }, i) => {
     const li = document.createElement('li');
     li.textContent = `[${fecha}]`;
-    // 🟢 Al hacer clic en un elemento del historial, lo mostramos en el popup
     li.addEventListener('click', () => {
       popupContent.textContent = texto;
       popup.classList.add('show');
@@ -149,11 +148,13 @@ function renderHistorial() {
   });
 }
 
-historialBtn.addEventListener('click', (e) => {
+// === Modificado: posicionamiento Historial sobre el textarea, esquina superior derecha ===
+historialBtn.addEventListener('click', e => {
   e.stopPropagation();
-  const rect = historialBtn.getBoundingClientRect();
-  historialList.style.top = `${rect.bottom + window.scrollY}px`;
-  historialList.style.left = `${rect.left + window.scrollX}px`;
+  const rect = transcriptionBox.getBoundingClientRect();
+  const menuHeight = historialList.offsetHeight;
+  historialList.style.top  = `${window.scrollY + rect.top - menuHeight}px`;
+  historialList.style.left = `${window.scrollX + rect.right}px`;
   historialList.classList.toggle('show');
 });
 
@@ -175,21 +176,12 @@ function renderAtajos() {
   });
 }
 
-addAtajoBtn.addEventListener('click', () => {
-  const clave = document.getElementById('atajo-clave').value.trim();
-  const valor = document.getElementById('atajo-valor').value.trim();
-  if (!clave || !valor) return alert('Completa ambos campos');
-  if (atajos[clave]) return alert('Esa clave ya existe');
-  atajos[clave] = valor;
-  localStorage.setItem('atajos', JSON.stringify(atajos));
-  renderAtajos();
-});
-
-atajosBtn.addEventListener('click', (e) => {
+// === Modificado: posicionamiento Atajos justo debajo del Historial ===
+atajosBtn.addEventListener('click', e => {
   e.stopPropagation();
-  const rect = atajosBtn.getBoundingClientRect();
-  atajosPanel.style.top = `${rect.bottom + window.scrollY}px`;
-  atajosPanel.style.left = `${rect.left + window.scrollX}px`;
+  const rect = transcriptionBox.getBoundingClientRect();
+  atajosPanel.style.top  = `${window.scrollY + rect.top}px`;
+  atajosPanel.style.left = `${window.scrollX + rect.right}px`;
   atajosPanel.classList.toggle('show');
 });
 
@@ -204,6 +196,11 @@ toggleAtajosListBtn.addEventListener('click', () => {
 });
 
 // === Cerrar dropdowns al hacer clic fuera ===
+// Cuando clicas dentro de cualquiera de los dropdowns, no cierres
+document.querySelectorAll('.dropdown-content').forEach(drop => {
+  drop.addEventListener('click', e => e.stopPropagation());
+});
+
 document.addEventListener('click', () => {
   historialList.classList.remove('show');
   atajosPanel.classList.remove('show');
