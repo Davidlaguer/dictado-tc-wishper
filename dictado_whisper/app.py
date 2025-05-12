@@ -124,9 +124,11 @@ def generar_informe():
         return jsonify(informe=respuesta)
 
     except Exception as e:
+        import traceback
         tb = traceback.format_exc()
-        print("❌ Exception during /informe:\n", tb)
-        return jsonify(error="Error interno del servidor"), 500
+        print("❌ Exception during /informe:\n" + tb)
+        # Devolvemos la traza en el JSON para poder verla en el cliente
+        return jsonify(error=tb), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
