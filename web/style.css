@@ -42,7 +42,6 @@ header h1 {
 label[for="transcription"] {
   display: block;
   margin-bottom: 12px;
-}
 
 /* === TOOLBAR BUTTONS === */
 .menu-buttons {
@@ -68,7 +67,7 @@ label[for="transcription"] {
 /* === TEXTAREA DE DICTADO === */
 textarea {
   width: 100%;
-  min-height: px; /* duplicada de 120px a 240px */
+  min-height: 360px; /* duplicada de 120px a 240px */
   padding: 12px;
   font-size: 16px;
   border: 1px solid #ccc;
