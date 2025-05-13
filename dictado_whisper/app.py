@@ -86,57 +86,23 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     try:
-        # 1️⃣ Crear thread
-        thread = client.beta.threads.create()
-        print("✅ Thread creado, ID:", thread.id)
-
-        # 2️⃣ Enviar dictado
-        msg = client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=dictado
+        # Llamada directa al assistant vía chat completions
+        resp = client.chat.completions.create(
+            model="gpt-4o",               # tu modelo gpt-4o
+            user="usuario-dictado",       # opcional, pero ayuda a rastrear
+            messages=[
+                { "role": "user", "content": dictado }
+            ]
         )
-        print("✅ Mensaje USER creado, ID:", msg.id)
-
-        # 3️⃣ Lanzar Assistant con tu assistant_id
-        run = client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant_id
-        )
-        print("✅ Run creado, ID:", run.id)
-
-        # 4️⃣ Polling hasta que complete o falle
-        for i in range(30):
-            time.sleep(2)
-            status = client.beta.threads.runs.retrieve(
-                thread_id=thread.id,
-                run_id=run.id
-            ).status
-            print(f"⏳ Poll {i+1}, status={status}")
-            if status == "completed":
-                print("✅ Run completado")
-                break
-            if status in ("failed", "cancelled", "expired"):
-                return jsonify(error=f"Assistant falló: {status}"), 500
-        else:
-            return jsonify(error="Timeout esperando respuesta"), 504
-
-        # 5️⃣ Obtener mensajes y filtrar los de assistant
-        messages = client.beta.threads.messages.list(thread_id=thread.id).data
-        assistant_msgs = [m for m in messages if m.role == "assistant"]
-        if not assistant_msgs:
-            return jsonify(error="No recibí respuesta del assistant"), 500
-
-        # Devolver tal cual el contenido
-        informe = assistant_msgs[-1].content
+        informe = resp.choices[0].message.content.strip()
         print("📄 Informe recibido:", informe)
         return jsonify(informe=informe)
 
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print("❌ Error en /informe:\n", tb)
-        return jsonify(error=tb), 500
+        print("❌ Error en /informe (chat):\n", tb)
+        return jsonify(error="Error interno al llamar a OpenAI"), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
