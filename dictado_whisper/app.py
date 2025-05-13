@@ -115,10 +115,10 @@ def generar_informe():
         else:
             return jsonify(error="Tiempo de espera excedido (timeout)"), 504
 
-        # Filtrar solo mensajes de assistant
+         # — Extraer la última respuesta sin filtrar por author —
         msgs = client.beta.threads.messages.list(thread_id=thread.id).data
-        assistant_msgs = [m for m in msgs if m.author.role == "assistant"]
-        respuesta = assistant_msgs[-1].content[0].text.value.strip()
+        last_msg = msgs[-1]
+        respuesta = last_msg.content[0].text.value.strip()
 
         print("📄 Informe recibido:", respuesta)
         return jsonify(informe=respuesta)
@@ -127,8 +127,7 @@ def generar_informe():
         import traceback
         tb = traceback.format_exc()
         print("❌ Exception during /informe:\n" + tb)
-        # Devolvemos la traza en el JSON para poder verla en el cliente
-        return jsonify(error=tb), 500
+        return jsonify(error="Error interno del servidor"), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
