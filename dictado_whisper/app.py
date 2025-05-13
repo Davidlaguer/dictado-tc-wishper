@@ -86,37 +86,45 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     try:
+        print("📤 dictado recibido:", dictado)
         print("📤 Creando thread para Assistant…")
         thread = client.beta.threads.create()
+        print("✅ Thread creado, ID:", thread.id)
 
-        print("📩 Enviando dictado al thread:", dictado)
-        client.beta.threads.messages.create(
+        print("📩 Enviando mensaje al thread…")
+        msg = client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=dictado
         )
+        print("✅ Mensaje creado, ID:", msg.id)
 
-        print("🚀 Lanzando Assistant con ID:", assistant_id)
+        print("🚀 Lanzando Assistant run con assistant_id:", assistant_id)
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=assistant_id
         )
+        print("✅ Run creado, ID:", run.id)
 
-        # Esperar a que termine (máx 30s)
-        for _ in range(30):
+        for i in range(30):
             time.sleep(2)
-            status = client.beta.threads.runs.retrieve(
+            run_status = client.beta.threads.runs.retrieve(
                 thread_id=thread.id, run_id=run.id
-            ).status
-            if status == "completed":
+            )
+            print(f"⏳ Poll {i+1}: status={run_status.status}")
+            if run_status.status == "completed":
+                print("✅ Run completado")
                 break
-            if status in ["failed", "cancelled", "expired"]:
-                return jsonify(error=f"Assistant falló: {status}"), 500
+            if run_status.status in ["failed", "cancelled", "expired"]:
+                print("❌ Run finalizado con estado:", run_status.status)
+                return jsonify(error=f"Assistant falló: {run_status.status}"), 500
         else:
+            print("❌ Timeout al esperar run")
             return jsonify(error="Tiempo de espera excedido (timeout)"), 504
 
-         # — Extraer la última respuesta sin filtrar por author —
+        print("📬 Obteniendo mensajes del thread…")
         msgs = client.beta.threads.messages.list(thread_id=thread.id).data
+        print("📬 Número de mensajes:", len(msgs))
         last_msg = msgs[-1]
         respuesta = last_msg.content[0].text.value.strip()
 
@@ -127,7 +135,7 @@ def generar_informe():
         import traceback
         tb = traceback.format_exc()
         print("❌ Exception during /informe:\n" + tb)
-        return jsonify(error="Error interno del servidor"), 500
+        return jsonify(error=tb), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
