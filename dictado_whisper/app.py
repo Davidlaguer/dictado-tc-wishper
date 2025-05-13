@@ -86,23 +86,28 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     try:
-        # Llamada directa al assistant vía chat completions
-        resp = client.chat.completions.create(
-            model="gpt-4o",               # tu modelo gpt-4o
-            user="usuario-dictado",       # opcional, pero ayuda a rastrear
-            messages=[
-                { "role": "user", "content": dictado }
-            ]
+        # 1️⃣ Invocamos directamente tu Assistant con system prompt
+        resp = client.assistants.completions.create(
+            assistant_id=assistant_id,
+            user="usuario-dictado",
+            messages=[{"role": "user", "content": dictado}]
         )
+
+        # 2️⃣ Extraemos el informe tal cual lo devuelve el assistant
         informe = resp.choices[0].message.content.strip()
         print("📄 Informe recibido:", informe)
+
+        # 3️⃣ Guardamos en historial (si quieres seguir usando historial)
+        guardarInforme(informe)
+
+        # 4️⃣ Lo devolvemos al front en el popup
         return jsonify(informe=informe)
 
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print("❌ Error en /informe (chat):\n", tb)
-        return jsonify(error="Error interno al llamar a OpenAI"), 500
+        print("❌ Error en /informe:\n", tb)
+        return jsonify(error="Error interno llamando al Assistant"), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
