@@ -78,7 +78,6 @@ def handle_audio_chunk(data):
     emit('transcription', {'text': text})
 
 # — Generación de informe vía Assistant API —
-# — Generación de informe vía Assistant API —
 @app.route('/informe', methods=['POST'])
 def generar_informe():
     data = request.get_json() or {}
@@ -87,28 +86,27 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     try:
-        # 1️⃣ Invocamos directamente tu Assistant con system prompt
-        resp = client.assistants.completions.create(
-            assistant_id=assistant_id,
-            user="usuario-dictado",
+        # 1️⃣ Envío directo a chat completions:
+        resp = client.chat.completions.create(
+            model="gpt-4o",
             messages=[{"role": "user", "content": dictado}]
         )
 
-        # 2️⃣ Extraemos el informe tal cual lo devuelve el assistant
+        # 2️⃣ Extraigo el contenido literal:
         informe = resp.choices[0].message.content.strip()
         print("📄 Informe recibido:", informe)
 
-        # 3️⃣ Guardamos en historial (si quieres seguir usando historial)
+        # 3️⃣ (Opcional) guardo en historial
         guardarInforme(informe)
 
-        # 4️⃣ Lo devolvemos al front en el popup
+        # 4️⃣ Devuelvo al front:
         return jsonify(informe=informe)
 
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
         print("❌ Error en /informe:\n", tb)
-        return jsonify(error="Error interno llamando al Assistant"), 500
+        return jsonify(error="Error interno llamando al chat completions"), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
