@@ -87,7 +87,7 @@ def generar_informe():
 
     try:
         resp = client.chat.completions.create(
-            model="gpt-4o-mini-high",
+            model="gpt-4o-realtime-preview-2024-12-17",
             messages=[
                 {
                     "role": "system",
