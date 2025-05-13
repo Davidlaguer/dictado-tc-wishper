@@ -78,6 +78,7 @@ def handle_audio_chunk(data):
     emit('transcription', {'text': text})
 
 # — Generación de informe vía Assistant API —
+# — Generación de informe vía Assistant API —
 @app.route('/informe', methods=['POST'])
 def generar_informe():
     data = request.get_json() or {}
