@@ -83,30 +83,22 @@ def generar_informe():
     data = request.get_json() or {}
     dictado = data.get('dictado', '').strip()
     if not dictado:
-        return jsonify(error="Dictado vacío"), 400
+        return Response("Dictado vacío", status=400, mimetype="text/plain")
 
     try:
-        # 1️⃣ Envío directo a chat completions:
+        # Llamada al Chat API usando el modelo gpt-4o
         resp = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": dictado}]
         )
-
-        # 2️⃣ Extraigo el contenido literal:
         informe = resp.choices[0].message.content.strip()
-        print("📄 Informe recibido:", informe)
-
-        # 3️⃣ (Opcional) guardo en historial
-        guardarInforme(informe)
-
-        # 4️⃣ Devuelvo al front:
-        return jsonify(informe=informe)
+        # Devolvemos texto plano
+        return Response(informe, mimetype="text/plain")
 
     except Exception as e:
-        import traceback
         tb = traceback.format_exc()
         print("❌ Error en /informe:\n", tb)
-        return jsonify(error="Error interno llamando al chat completions"), 500
+        return Response("Error interno llamando al Assistant", status=500, mimetype="text/plain")
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))

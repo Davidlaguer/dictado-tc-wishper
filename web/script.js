@@ -63,9 +63,13 @@ socket.on('transcription', ({ text }) => {
   }
 });
 
+// === Generar informe ===
 generateBtn.addEventListener('click', async () => {
   const dictado = transcriptionBox.value.trim();
-  if (!dictado) return alert('Dictado vacío');
+  if (!dictado) {
+    return alert('Dictado vacío');
+  }
+
   generateBtn.disabled = true;
   generateBtn.textContent = 'Generando…';
 
@@ -75,18 +79,22 @@ generateBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dictado })
     });
-    const data = await res.json();
 
     if (!res.ok) {
-      // Mostrar el error completo que viene del servidor
-      return alert('Error generando informe:\n' + data.error);
+      const err = await res.text();
+      throw new Error(err || 'Error generando informe');
     }
-    // si todo bien:
-    popupContent.textContent = data.informe.trim();
-    guardarInforme(data.informe);
+
+    // Leemos el cuerpo como texto
+    const informe = await res.text();
+
+    // Mostramos el popup con el informe tal cual
+    popupContent.textContent = informe;
+    guardarInforme(informe);
     popup.classList.add('show');
+
   } catch (e) {
-    alert('Error de red: ' + e.message);
+    alert('Error generando informe: ' + e.message);
   } finally {
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generar informe';
