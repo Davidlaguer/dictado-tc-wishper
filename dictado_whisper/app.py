@@ -86,55 +86,27 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     try:
-        print("📤 dictado recibido:", dictado)
-        print("📤 Creando thread para Assistant…")
-        thread = client.beta.threads.create()
-        print("✅ Thread creado, ID:", thread.id)
-
-        print("📩 Enviando mensaje al thread…")
-        msg = client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=dictado
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini-high",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Eres un asistente que recibe hallazgos de TC y devuelve un informe "
+                        "médico formal en oraciones completas, separando hallazgos y conclusiones."
+                    )
+                },
+                { "role": "user", "content": dictado }
+            ]
         )
-        print("✅ Mensaje creado, ID:", msg.id)
-
-        print("🚀 Lanzando Assistant run con assistant_id:", assistant_id)
-        run = client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant_id
-        )
-        print("✅ Run creado, ID:", run.id)
-
-        for i in range(30):
-            time.sleep(2)
-            run_status = client.beta.threads.runs.retrieve(
-                thread_id=thread.id, run_id=run.id
-            )
-            print(f"⏳ Poll {i+1}: status={run_status.status}")
-            if run_status.status == "completed":
-                print("✅ Run completado")
-                break
-            if run_status.status in ["failed", "cancelled", "expired"]:
-                print("❌ Run finalizado con estado:", run_status.status)
-                return jsonify(error=f"Assistant falló: {run_status.status}"), 500
-        else:
-            print("❌ Timeout al esperar run")
-            return jsonify(error="Tiempo de espera excedido (timeout)"), 504
-
-        print("📬 Obteniendo mensajes del thread…")
-        msgs = client.beta.threads.messages.list(thread_id=thread.id).data
-        print("📬 Número de mensajes:", len(msgs))
-        last_msg = msgs[-1]
-        respuesta = last_msg.content[0].text.value.strip()
-
-        print("📄 Informe recibido:", respuesta)
-        return jsonify(informe=respuesta)
+        informe = resp.choices[0].message.content.strip()
+        print("📄 Informe recibido (chat):", informe)
+        return jsonify(informe=informe)
 
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
-        print("❌ Exception during /informe:\n" + tb)
+        print("❌ Exception during /informe (chat):\n" + tb)
         return jsonify(error=tb), 500
 
 if __name__ == '__main__':
