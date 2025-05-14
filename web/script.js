@@ -1,4 +1,3 @@
-// === script.js actualizado ===
 const socket = io();
 
 // === Elementos DOM ===
@@ -20,6 +19,7 @@ const popup = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
 const popupCopyBtn = document.getElementById('popup-copy-btn');
 const popupCloseBtn = document.getElementById('popup-close-btn');
+const loadingOverlay = document.getElementById('loading-overlay');
 
 let isRecording = false;
 let mediaRecorder;
@@ -63,42 +63,6 @@ socket.on('transcription', ({ text }) => {
   }
 });
 
-// === Generar informe ===
-@app.route('/informe', methods=['POST'])
-def generar_informe():
-    data = request.get_json() or {}
-    dictado = data.get('dictado', '').strip()
-    if not dictado:
-        return jsonify(error="Dictado vacío"), 400
-
-    from openai.error import RateLimitError
-
-    for intento in range(3):
-        try:
-            resp = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": dictado}],
-                max_tokens=800,
-                temperature=0.2
-            )
-            contenido = resp.choices[0].message.content.strip()
-            print("📄 Informe recibido:", contenido)
-            return jsonify(informe=contenido)
-
-        except RateLimitError:
-            wait = 2 ** intento
-            print(f"⚠️ Rate limit, retry en {wait}s… ({intento + 1}/3)")
-            time.sleep(wait)
-            continue
-
-        except Exception as e:
-            tb = traceback.format_exc()
-            print("❌ Error en /informe (chat):\n", tb)
-            return jsonify(error="Error interno al llamar a OpenAI"), 500
-
-    return jsonify(error="Demasiados rate-limits, prueba más tarde"), 503
-});
-
 copyBtn.addEventListener('click', () => {
   transcriptionBox.select();
   document.execCommand('copy');
@@ -118,6 +82,7 @@ generateBtn.addEventListener('click', async () => {
 
   generateBtn.textContent = '⏳ Generando...';
   generateBtn.disabled = true;
+  loadingOverlay.style.display = 'flex';
 
   try {
     const res = await fetch('/informe', {
@@ -138,6 +103,7 @@ generateBtn.addEventListener('click', async () => {
     console.error(e);
     alert('Error al conectar con el servidor');
   } finally {
+    loadingOverlay.style.display = 'none';
     generateBtn.textContent = 'Generar informe';
     generateBtn.disabled = false;
   }
@@ -197,13 +163,11 @@ document.querySelectorAll('.dropdown-content').forEach(drop => {
   drop.addEventListener('click', e => e.stopPropagation());
 });
 
-// Historial bajo controles
 historialBtn.addEventListener('click', e => {
   e.stopPropagation();
   historialList.classList.toggle('show');
 });
 
-// Atajos bajo controles
 atajosBtn.addEventListener('click', e => {
   e.stopPropagation();
   atajosPanel.classList.toggle('show');
