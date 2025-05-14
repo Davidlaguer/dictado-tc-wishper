@@ -112,6 +112,37 @@ popupCloseBtn.addEventListener('click', () => {
   popup.classList.remove('show');
 });
 
+generateBtn.addEventListener('click', async () => {
+  const dictado = transcriptionBox.value.trim();
+  if (!dictado) return alert('Dictado vacío');
+
+  generateBtn.textContent = '⏳ Generando...';
+  generateBtn.disabled = true;
+
+  try {
+    const res = await fetch('/informe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dictado })
+    });
+
+    const data = await res.json();
+    if (data.informe) {
+      popupContent.textContent = data.informe;
+      popup.classList.add('show');
+      guardarInforme(data.informe);
+    } else {
+      alert(data.error || 'Error al generar informe');
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Error al conectar con el servidor');
+  } finally {
+    generateBtn.textContent = 'Generar informe';
+    generateBtn.disabled = false;
+  }
+});
+
 resetBtn.addEventListener('click', () => {
   transcriptionBox.value = '';
 });
