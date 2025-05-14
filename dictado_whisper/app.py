@@ -86,19 +86,40 @@ def generar_informe():
         return jsonify(error="Dictado vacío"), 400
 
     try:
-        # Llamada directa al chat completions de GPT-4o
-        resp = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": dictado}]
+        # Crear hilo
+        thread = client.beta.threads.create()
+
+        # Enviar mensaje del usuario
+        client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=dictado
         )
-        contenido = resp.choices[0].message.content.strip()
+
+        # Ejecutar el assistant sobre el hilo
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=assistant_id
+        )
+
+        # Esperar la respuesta
+        while run.status not in ["completed", "failed", "cancelled"]:
+            time.sleep(1)
+            run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+        if run.status != "completed":
+            return jsonify(error="Error al completar la solicitud"), 500
+
+        # Obtener mensaje final
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        contenido = messages.data[0].content[0].text.value.strip()
+
         print("📄 Informe recibido:", contenido)
         return jsonify(informe=contenido)
 
     except Exception as e:
         tb = traceback.format_exc()
         print("❌ Error en /informe:\n", tb)
-        # Siempre devolvemos JSON incluso en 500
         return jsonify(error="Error interno del servidor"), 500
 
 if __name__ == '__main__':
