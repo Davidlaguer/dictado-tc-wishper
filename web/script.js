@@ -64,40 +64,39 @@ socket.on('transcription', ({ text }) => {
 });
 
 // === Generar informe ===
-generateBtn.addEventListener('click', async () => {
-  const dictado = transcriptionBox.value.trim();
-  if (!dictado) return alert('Dictado vacío');
+@app.route('/informe', methods=['POST'])
+def generar_informe():
+    data = request.get_json() or {}
+    dictado = data.get('dictado', '').strip()
+    if not dictado:
+        return jsonify(error="Dictado vacío"), 400
 
-  generateBtn.disabled = true;
-  generateBtn.textContent = 'Generando…';
+    from openai.error import RateLimitError
 
-  try {
-    const res = await fetch('/informe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dictado })
-    });
+    for intento in range(3):
+        try:
+            resp = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": dictado}],
+                max_tokens=800,
+                temperature=0.2
+            )
+            contenido = resp.choices[0].message.content.strip()
+            print("📄 Informe recibido:", contenido)
+            return jsonify(informe=contenido)
 
-    // Si el servidor respondió 500 o 400, tomamos el texto y lo mostramos
-    if (!res.ok) {
-      const errText = await res.text();
-      return alert('Error generando informe: ' + errText);
-    }
+        except RateLimitError:
+            wait = 2 ** intento
+            print(f"⚠️ Rate limit, retry en {wait}s… ({intento + 1}/3)")
+            time.sleep(wait)
+            continue
 
-    const data = await res.json();
-    if (data.informe) {
-      popupContent.textContent = data.informe;
-      guardarInforme(data.informe);
-      popup.classList.add('show');
-    } else {
-      alert('Error generando informe: ' + (data.error||'Respuesta inválida'));
-    }
-  } catch (e) {
-    alert('Error del servidor: ' + e.message);
-  } finally {
-    generateBtn.disabled = false;
-    generateBtn.textContent = 'Generar informe';
-  }
+        except Exception as e:
+            tb = traceback.format_exc()
+            print("❌ Error en /informe (chat):\n", tb)
+            return jsonify(error="Error interno al llamar a OpenAI"), 500
+
+    return jsonify(error="Demasiados rate-limits, prueba más tarde"), 503
 });
 
 copyBtn.addEventListener('click', () => {
