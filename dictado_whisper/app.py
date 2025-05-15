@@ -58,8 +58,7 @@ def transcribe_audio():
             return jsonify(error="No se envió archivo de audio"), 400
 
         audio_file = request.files['audio']
-        filename = secure_filename(audio_file.filename)
-        print(f"📥 Recibido archivo: {filename}")
+        print(f"📥 Recibido archivo: {audio_file.filename}, type={audio_file.content_type}")
 
         result = client.audio.transcriptions.create(
             model="whisper-1",
@@ -71,8 +70,9 @@ def transcribe_audio():
         return jsonify(text=result.text)
 
     except Exception as e:
-        print("❌ Error al transcribir:", e)
-        return jsonify(error="Error interno en el servidor"), 500
+        import traceback
+        print("❌ Error al transcribir:\n", traceback.format_exc())
+        return jsonify(error="Error interno del servidor"), 500
 
 # — Generación de informe vía Assistant API —
 @app.route('/informe', methods=['POST'])
