@@ -41,9 +41,9 @@ micButton.addEventListener('click', async () => {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'audio.webm');
+  	const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+  	const formData = new FormData();
+  	formData.append('audio', audioBlob, 'audio.webm');
 
         try {
           const res = await fetch('/transcribe', {
