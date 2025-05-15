@@ -1,5 +1,3 @@
-const socket = io();
-
 // === Elementos DOM ===
 const transcriptionBox = document.getElementById('transcription');
 const micButton = document.getElementById('mic-button');
