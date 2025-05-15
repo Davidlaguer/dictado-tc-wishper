@@ -34,7 +34,7 @@ micButton.addEventListener('click', async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start(5000);
+      mediaRecorder.start(1000);
       mediaRecorder.ondataavailable = e => {
         if (e.data.size > 0) {
           e.data.arrayBuffer().then(buf => {
