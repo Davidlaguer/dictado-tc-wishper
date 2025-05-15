@@ -59,7 +59,7 @@ def static_files(filename):
     return app.send_static_file(filename)
 
 # — Whisper modelo local —
-model = whisper.load_model("medium")
+model = whisper.load_model("base")
 
 @socketio.on('audio_chunk')
 def handle_audio_chunk(data):
