@@ -57,9 +57,12 @@ micButton.addEventListener('click', async () => {
 });
 
 socket.on('transcription', ({ text }) => {
-  if (text) {
-    transcriptionBox.value += text + ' ';
+  console.log("📝 Transcripción recibida:", text);
+  if (text && transcriptionBox) {
+    transcriptionBox.value += text.trim() + ' ';
     transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+  } else {
+    console.warn("⚠️ No se encontró transcriptionBox o texto vacío");
   }
 });
 
