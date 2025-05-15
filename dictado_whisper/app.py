@@ -33,6 +33,14 @@ def health():
     except Exception as e:
         return f"ERROR: {e}", 500
 
+@app.route('/test-openai')
+def test_openai():
+    try:
+        modelos = client.models.list()
+        return jsonify(success=True, models=[m.id for m in modelos.data])
+    except Exception as e:
+        return jsonify(success=False, error=str(e)), 500
+
 @app.route('/')
 def root():
     return app.send_static_file('dashboard.html')
@@ -44,16 +52,27 @@ def static_files(filename):
 # — Transcripción vía Whisper API —
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
-    if 'audio' not in request.files:
-        return jsonify(error="No se envió archivo de audio"), 400
-    audio_file = request.files['audio']
-    filename = secure_filename(audio_file.filename)
     try:
-        result = client.audio.transcriptions.create(model="whisper-1", file=audio_file, language="es")
+        if 'audio' not in request.files:
+            print("❌ No se recibió archivo 'audio'")
+            return jsonify(error="No se envió archivo de audio"), 400
+
+        audio_file = request.files['audio']
+        filename = secure_filename(audio_file.filename)
+        print(f"📥 Recibido archivo: {filename}")
+
+        result = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            language="es"
+        )
+
+        print("✅ Transcripción completada")
         return jsonify(text=result.text)
+
     except Exception as e:
-        print("❌ Error en transcripción:", e)
-        return jsonify(error="Error al transcribir audio"), 500
+        print("❌ Error al transcribir:", e)
+        return jsonify(error="Error interno en el servidor"), 500
 
 # — Generación de informe vía Assistant API —
 @app.route('/informe', methods=['POST'])
