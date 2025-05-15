@@ -34,33 +34,53 @@ micButton.addEventListener('click', async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.start(1000);
+      let chunks = [];
+
       mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) {
-          e.data.arrayBuffer().then(buf => {
-            socket.emit('audio_chunk', { chunk: new Uint8Array(buf) });
-          });
-        }
+        if (e.data.size > 0) chunks.push(e.data);
       };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'audio.webm');
+
+        try {
+          const res = await fetch('/transcribe', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          if (data.text) {
+            transcriptionBox.value += data.text.trim() + ' ';
+            transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+          } else {
+            alert(data.error || 'Error de transcripción');
+          }
+        } catch (err) {
+          console.error('Error enviando audio:', err);
+          alert('Error al enviar audio al servidor');
+        }
+
+        micButton.classList.remove('active');
+        isRecording = false;
+      };
+
+      chunks = [];
+      mediaRecorder.start();
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, 5000); // 5 segundos de grabación por bloque
+
       micButton.classList.add('active');
-      mediaRecorder.onstop = () => micButton.classList.remove('active');
       isRecording = true;
+
     } catch (e) {
       alert('Error con el micrófono: ' + e.message);
     }
   } else {
     mediaRecorder.stop();
     isRecording = false;
-  }
-});
-
-socket.on('transcription', ({ text }) => {
-  console.log("📝 Transcripción recibida:", text);
-  if (text && transcriptionBox) {
-    transcriptionBox.value += text.trim() + ' ';
-    transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-  } else {
-    console.warn("⚠️ No se encontró transcriptionBox o texto vacío");
   }
 });
 
