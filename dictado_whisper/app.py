@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import tempfile
 import subprocess
@@ -39,7 +42,7 @@ app = Flask(
     static_url_path=''
 )
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # — Endpoint de salud —
 @app.route('/health')
