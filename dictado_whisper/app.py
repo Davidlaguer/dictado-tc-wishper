@@ -50,6 +50,7 @@ def static_files(filename):
     return app.send_static_file(filename)
 
 # — Transcripción vía Whisper API —
+
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
     try:
