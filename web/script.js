@@ -29,165 +29,12 @@ let historial = JSON.parse(localStorage.getItem('historial') || '[]');
 let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 let modoDictado = localStorage.getItem('modoDictado') || 'manual';
 
-// === Inicialización ===
-document.addEventListener('DOMContentLoaded', () => {
-  renderHistorial();
-  renderAtajos();
-  actualizarModo();
-});
-
-function actualizarModo() {
-  if (modoDictado === 'manual') {
-    modoManualBtn.classList.add('active');
-    modoAutoBtn.classList.remove('active');
-    modoEstado.textContent = '🎙️ Estás dictando en modo MANUAL';
-  } else {
-    modoManualBtn.classList.remove('active');
-    modoAutoBtn.classList.add('active');
-    modoEstado.textContent = '🎙️ Estás dictando en modo AUTOMÁTICO';
-  }
-  localStorage.setItem('modoDictado', modoDictado);
-}
-
-modoManualBtn.addEventListener('click', () => {
-  modoDictado = 'manual';
-  actualizarModo();
-});
-
-modoAutoBtn.addEventListener('click', () => {
-  modoDictado = 'automatico';
-  actualizarModo();
-});
-
 function aplicarCorrecciones(texto) {
   return texto
     .replace(/\bpunto y coma\b/gi, ';')
     .replace(/\bpunto\b/gi, '.')
     .replace(/\bcoma\b/gi, ',');
 }
-
-micButton.addEventListener('click', async () => {
-if (isRecording) {
-  mediaRecorder.stop();
-  micButton.classList.remove('active');
-  isRecording = false;
-  return;
-}
-if (mediaRecorder && mediaRecorder.state === 'recording') {
-  console.warn("Ya se está grabando. Ignorado doble clic.");
-  return;
-}
-
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-  mediaRecorder.stop();
-}
-mediaRecorder = new MediaRecorder(stream);
-isRecording = true;
-micButton.classList.add('active');
-
-    if (modoDictado === 'automatico') {
-      mediaRecorder.ondataavailable = async e => {
-        if (e.data.size > 0) {
-          const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'audio.webm');
-
-          try {
-            const res = await fetch('/transcribe', { method: 'POST', body: formData });
-            const data = await res.json();
-            if (data.text) {
-              transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
-              transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-            }
-          } catch (err) {
-            console.error('Error en transcripción automática:', err);
-          }
-        }
-      };
-      mediaRecorder.start(3000);  // cada 3 segundos envía
-    } else {
-      let chunks = [];
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-        const formData = new FormData();
-        formData.append('audio', audioBlob, 'audio.webm');
-        try {
-          const res = await fetch('/transcribe', { method: 'POST', body: formData });
-          const data = await res.json();
-          if (data.text) {
-            transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
-            transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-          }
-        } catch (err) {
-          console.error('Error en transcripción manual:', err);
-        }
-        micButton.classList.remove('active');
-        isRecording = false;
-      };
-      mediaRecorder.start();  // manual, sin segmentos
-    }
-
-  } catch (e) {
-    alert('Error con el micrófono: ' + e.message);
-isRecording = false;
-mediaRecorder = null;
-micButton.classList.remove('active');
-
-});
-
-copyBtn.addEventListener('click', () => {
-  transcriptionBox.select();
-  document.execCommand('copy');
-});
-
-popupCopyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(popupContent.textContent);
-});
-
-popupCloseBtn.addEventListener('click', () => {
-  popup.classList.remove('show');
-});
-
-generateBtn.addEventListener('click', async () => {
-  const dictado = transcriptionBox.value.trim();
-  if (!dictado) return alert('Dictado vacío');
-
-  generateBtn.textContent = '⏳ Generando...';
-  generateBtn.disabled = true;
-  loadingOverlay.style.display = 'flex';
-
-  try {
-    const res = await fetch('/informe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dictado })
-    });
-
-    const data = await res.json();
-    if (data.informe) {
-      popupContent.textContent = data.informe;
-      popup.classList.add('show');
-      guardarInforme(data.informe);
-    } else {
-      alert(data.error || 'Error al generar informe');
-    }
-  } catch (e) {
-    console.error(e);
-    alert('Error al conectar con el servidor');
-  } finally {
-    loadingOverlay.style.display = 'none';
-    generateBtn.textContent = 'Generar informe';
-    generateBtn.disabled = false;
-  }
-});
-
-resetBtn.addEventListener('click', () => {
-  transcriptionBox.value = '';
-});
 
 function guardarInforme(texto) {
   const fecha = new Date().toLocaleString();
@@ -234,35 +81,186 @@ function renderAtajos() {
   });
 }
 
-document.querySelectorAll('.dropdown-content').forEach(drop => {
-  drop.addEventListener('click', e => e.stopPropagation());
-});
-
-historialBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  historialList.classList.toggle('show');
-});
-
-atajosBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  atajosPanel.classList.toggle('show');
-});
-
-toggleAtajosListBtn.addEventListener('click', () => {
-  if (atajosGuardadosList.style.display === 'block') {
-    atajosGuardadosList.style.display = 'none';
-    toggleAtajosListBtn.textContent = '📋 Ver atajos guardados';
+function actualizarModo() {
+  if (modoDictado === 'manual') {
+    modoManualBtn.classList.add('active');
+    modoAutoBtn.classList.remove('active');
+    modoEstado.textContent = '🎙️ Estás dictando en modo MANUAL';
   } else {
-    atajosGuardadosList.style.display = 'block';
-    toggleAtajosListBtn.textContent = '❌ Ocultar atajos guardados';
+    modoManualBtn.classList.remove('active');
+    modoAutoBtn.classList.add('active');
+    modoEstado.textContent = '🎙️ Estás dictando en modo AUTOMÁTICO';
   }
-});
+  localStorage.setItem('modoDictado', modoDictado);
+}
 
-document.addEventListener('click', () => {
-  historialList.classList.remove('show');
-  atajosPanel.classList.remove('show');
-});
+document.addEventListener('DOMContentLoaded', () => {
+  renderHistorial();
+  renderAtajos();
+  actualizarModo();
 
-toggleAppBtn?.addEventListener('click', () => {
-  window.open('index.html', '_blank', 'width=540,height=720');
+  modoManualBtn.addEventListener('click', () => {
+    modoDictado = 'manual';
+    actualizarModo();
+  });
+
+  modoAutoBtn.addEventListener('click', () => {
+    modoDictado = 'automatico';
+    actualizarModo();
+  });
+
+  micButton.addEventListener('click', async () => {
+    if (isRecording) {
+      mediaRecorder.stop();
+      micButton.classList.remove('active');
+      isRecording = false;
+      return;
+    }
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      console.warn("Ya se está grabando. Ignorado doble clic.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      mediaRecorder = new MediaRecorder(stream);
+      isRecording = true;
+      micButton.classList.add('active');
+
+      if (modoDictado === 'automatico') {
+        mediaRecorder.ondataavailable = async e => {
+          if (e.data.size > 0) {
+            const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.webm');
+            try {
+              const res = await fetch('/transcribe', { method: 'POST', body: formData });
+              const data = await res.json();
+              if (data.text) {
+                transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
+                transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+              }
+            } catch (err) {
+              console.error('Error en transcripción automática:', err);
+            }
+          }
+        };
+        mediaRecorder.start(3000);
+      } else {
+        let chunks = [];
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'audio.webm');
+          try {
+            const res = await fetch('/transcribe', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.text) {
+              transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
+              transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+            }
+          } catch (err) {
+            console.error('Error en transcripción manual:', err);
+          }
+          isRecording = false;
+          mediaRecorder = null;
+          micButton.classList.remove('active');
+        };
+        mediaRecorder.start();
+      }
+
+    } catch (e) {
+      alert('Error con el micrófono: ' + e.message);
+      isRecording = false;
+      mediaRecorder = null;
+      micButton.classList.remove('active');
+    }
+  });
+
+  copyBtn.addEventListener('click', () => {
+    transcriptionBox.select();
+    document.execCommand('copy');
+  });
+
+  popupCopyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(popupContent.textContent);
+  });
+
+  popupCloseBtn.addEventListener('click', () => {
+    popup.classList.remove('show');
+  });
+
+  generateBtn.addEventListener('click', async () => {
+    const dictado = transcriptionBox.value.trim();
+    if (!dictado) return alert('Dictado vacío');
+
+    generateBtn.textContent = '⏳ Generando...';
+    generateBtn.disabled = true;
+    loadingOverlay.style.display = 'flex';
+
+    try {
+      const res = await fetch('/informe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dictado })
+      });
+
+      const data = await res.json();
+      if (data.informe) {
+        popupContent.textContent = data.informe;
+        popup.classList.add('show');
+        guardarInforme(data.informe);
+      } else {
+        alert(data.error || 'Error al generar informe');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error al conectar con el servidor');
+    } finally {
+      loadingOverlay.style.display = 'none';
+      generateBtn.textContent = 'Generar informe';
+      generateBtn.disabled = false;
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    transcriptionBox.value = '';
+  });
+
+  historialBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    historialList.classList.toggle('show');
+  });
+
+  atajosBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    atajosPanel.classList.toggle('show');
+  });
+
+  toggleAtajosListBtn.addEventListener('click', () => {
+    if (atajosGuardadosList.style.display === 'block') {
+      atajosGuardadosList.style.display = 'none';
+      toggleAtajosListBtn.textContent = '📋 Ver atajos guardados';
+    } else {
+      atajosGuardadosList.style.display = 'block';
+      toggleAtajosListBtn.textContent = '❌ Ocultar atajos guardados';
+    }
+  });
+
+  toggleAppBtn?.addEventListener('click', () => {
+    window.open('index.html', '_blank', 'width=540,height=720');
+  });
+
+  document.querySelectorAll('.dropdown-content').forEach(drop => {
+    drop.addEventListener('click', e => e.stopPropagation());
+  });
+
+  document.addEventListener('click', () => {
+    historialList.classList.remove('show');
+    atajosPanel.classList.remove('show');
+  });
 });
