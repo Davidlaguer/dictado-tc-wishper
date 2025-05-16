@@ -13,6 +13,7 @@ const addAtajoBtn = document.getElementById('crear-atajo-button');
 const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
 const modoBtn = document.getElementById('modo-dictado-button');
+const modoEstado = document.getElementById('modo-estado');
 
 const popup = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
@@ -27,7 +28,8 @@ let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 let modoDictado = localStorage.getItem('modoDictado') || 'manual';
 
 function actualizarTextoModo() {
-  modoBtn.textContent = `🎛️ Modo: ${modoDictado === 'manual' ? 'Manual' : 'Automático'}`;
+  modoBtn.textContent = `Cambiar a modo ${modoDictado === 'manual' ? 'automático' : 'manual'}`;
+  modoEstado.textContent = `🎙️ Estás dictando en modo ${modoDictado.toUpperCase()}`;
 }
 actualizarTextoModo();
 
@@ -103,10 +105,10 @@ micButton.addEventListener('click', async () => {
       };
 
       if (modoDictado === 'automatico') {
-        mediaRecorder.start(3000);
+        mediaRecorder.start(3000); // ⏱️ envía bloques cada 3 segundos
       } else {
         chunks = [];
-        mediaRecorder.start();
+        mediaRecorder.start();     // 🎛️ grabación continua hasta que se detenga
       }
 
       micButton.classList.add('active');
@@ -248,4 +250,3 @@ document.addEventListener('click', () => {
 toggleAppBtn?.addEventListener('click', () => {
   window.open('index.html', '_blank', 'width=540,height=720');
 });
-
