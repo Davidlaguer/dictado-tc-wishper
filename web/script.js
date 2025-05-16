@@ -67,38 +67,23 @@ function aplicarCorrecciones(texto) {
 }
 
 micButton.addEventListener('click', async () => {
-  if (!isRecording) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      let chunks = [];
+  if (isRecording) {
+    mediaRecorder.stop();
+    micButton.classList.remove('active');
+    isRecording = false;
+    return;
+  }
 
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    isRecording = true;
+    micButton.classList.add('active');
+
+    if (modoDictado === 'automatico') {
       mediaRecorder.ondataavailable = async e => {
         if (e.data.size > 0) {
-          if (modoDictado === 'automatico') {
-            const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'audio.webm');
-            try {
-              const res = await fetch('/transcribe', { method: 'POST', body: formData });
-              const data = await res.json();
-              if (data.text) {
-                const corregido = aplicarCorrecciones(data.text);
-                transcriptionBox.value += corregido.trim() + ' ';
-                transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-              }
-            } catch (err) {
-              console.error('Error transcribiendo:', err);
-            }
-          } else {
-            chunks.push(e.data);
-          }
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        if (modoDictado === 'manual' && chunks.length > 0) {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+          const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
           const formData = new FormData();
           formData.append('audio', audioBlob, 'audio.webm');
 
@@ -106,33 +91,41 @@ micButton.addEventListener('click', async () => {
             const res = await fetch('/transcribe', { method: 'POST', body: formData });
             const data = await res.json();
             if (data.text) {
-              const corregido = aplicarCorrecciones(data.text);
-              transcriptionBox.value += corregido.trim() + ' ';
+              transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
               transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
             }
           } catch (err) {
-            console.error('Error transcribiendo:', err);
+            console.error('Error en transcripción automática:', err);
           }
+        }
+      };
+      mediaRecorder.start(3000);  // cada 3 segundos envía
+    } else {
+      let chunks = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'audio.webm');
+        try {
+          const res = await fetch('/transcribe', { method: 'POST', body: formData });
+          const data = await res.json();
+          if (data.text) {
+            transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
+            transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+          }
+        } catch (err) {
+          console.error('Error en transcripción manual:', err);
         }
         micButton.classList.remove('active');
         isRecording = false;
       };
-
-      if (modoDictado === 'automatico') {
-        mediaRecorder.start(3000); // bloques de 3 segundos
-      } else {
-        chunks = [];
-        mediaRecorder.start();
-      }
-
-      micButton.classList.add('active');
-      isRecording = true;
-
-    } catch (e) {
-      alert('Error con el micrófono: ' + e.message);
+      mediaRecorder.start();  // manual, sin segmentos
     }
-  } else {
-    mediaRecorder.stop();
+
+  } catch (e) {
+    alert('Error con el micrófono: ' + e.message);
+    micButton.classList.remove('active');
     isRecording = false;
   }
 });
