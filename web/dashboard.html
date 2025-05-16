@@ -5,33 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dictado Informes TC</title>
   <link rel="stylesheet" href="style.css?v=20250512">
+  <style>
+    .modo-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .modo-buttons button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border: 1px solid #999;
+      background: #eee;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .modo-buttons button.active {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+  </style>
 </head>
 
-<div id="loading-overlay">
-  <div class="spinner"></div>
-  <p>Generando informe...</p>
-</div>
-
 <body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Generando informe...</p>
+  </div>
+
   <div id="main-container">
     <header>
       <h1>DICTADO INFORMES TC</h1>
       <div class="top-buttons">
         <button id="modo-app-button">📱 Modo app móvil</button>
-        <div class="modo-dictado-container">
-          <label for="modo-dictado-manual">Modo de dictado:</label>
-          <div class="modo-toggle">
-            <button id="modo-dictado-manual" class="modo-toggle-btn selected">Manual</button>
-            <button id="modo-dictado-automatico" class="modo-toggle-btn">Automático</button>
-          </div>
-        </div>
         <button id="logout-button">🔓 Cerrar sesión</button>
       </div>
     </header>
 
     <section>
       <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
-      <textarea id="transcription" placeholder="Ej. Modo plantillas. TC de abdomen...\nEstás dictando en modo MANUAL"></textarea>
+      <textarea
+        id="transcription"
+        placeholder="Ej. Modo plantillas. TC de abdomen...&#10;Estás dictando en modo MANUAL">
+      </textarea>
+
+      <div class="modo-buttons">
+        <button id="modo-manual-btn" class="active">Manual</button>
+        <button id="modo-automatico-btn">Automático</button>
+      </div>
+
       <div class="controls">
         <button id="mic-button">🎤 Micrófono</button>
         <button id="generate-btn">Generar informe</button>
