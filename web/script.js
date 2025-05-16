@@ -12,6 +12,7 @@ const toggleAppBtn = document.getElementById('modo-app-button');
 const addAtajoBtn = document.getElementById('crear-atajo-button');
 const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
+const modoBtn = document.getElementById('modo-dictado-button');
 
 const popup = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
@@ -23,6 +24,25 @@ let isRecording = false;
 let mediaRecorder;
 let historial = JSON.parse(localStorage.getItem('historial') || '[]');
 let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
+let modoDictado = localStorage.getItem('modoDictado') || 'manual';
+
+function actualizarTextoModo() {
+  modoBtn.textContent = `🎛️ Modo: ${modoDictado === 'manual' ? 'Manual' : 'Automático'}`;
+}
+actualizarTextoModo();
+
+modoBtn.addEventListener('click', () => {
+  modoDictado = (modoDictado === 'manual') ? 'automatico' : 'manual';
+  localStorage.setItem('modoDictado', modoDictado);
+  actualizarTextoModo();
+});
+
+function aplicarCorrecciones(texto) {
+  return texto
+    .replace(/\bpunto y coma\b/gi, ';')
+    .replace(/\bpunto\b/gi, '.')
+    .replace(/\bcoma\b/gi, ',');
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   renderHistorial();
@@ -36,41 +56,58 @@ micButton.addEventListener('click', async () => {
       mediaRecorder = new MediaRecorder(stream);
       let chunks = [];
 
-      mediaRecorder.ondataavailable = e => {
-        if (e.data.size > 0) chunks.push(e.data);
+      mediaRecorder.ondataavailable = async e => {
+        if (e.data.size > 0) {
+          if (modoDictado === 'automatico') {
+            const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.webm');
+
+            try {
+              const res = await fetch('/transcribe', { method: 'POST', body: formData });
+              const data = await res.json();
+              if (data.text) {
+                const corregido = aplicarCorrecciones(data.text);
+                transcriptionBox.value += corregido.trim() + ' ';
+                transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+              }
+            } catch (err) {
+              console.error('Error enviando audio:', err);
+            }
+          } else {
+            chunks.push(e.data);
+          }
+        }
       };
 
       mediaRecorder.onstop = async () => {
-  	const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-  	const formData = new FormData();
-  	formData.append('audio', audioBlob, 'audio.webm');
+        if (modoDictado === 'manual' && chunks.length > 0) {
+          const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'audio.webm');
 
-        try {
-          const res = await fetch('/transcribe', {
-            method: 'POST',
-            body: formData
-          });
-          const data = await res.json();
-          if (data.text) {
-            transcriptionBox.value += data.text.trim() + ' ';
-            transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-          } else {
-            alert(data.error || 'Error de transcripción');
+          try {
+            const res = await fetch('/transcribe', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.text) {
+              const corregido = aplicarCorrecciones(data.text);
+              transcriptionBox.value += corregido.trim() + ' ';
+              transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+            }
+          } catch (err) {
+            console.error('Error enviando audio:', err);
           }
-        } catch (err) {
-          console.error('Error enviando audio:', err);
-          alert('Error al enviar audio al servidor');
         }
-
         micButton.classList.remove('active');
         isRecording = false;
       };
 
-      chunks = [];
-      mediaRecorder.start();
-      setTimeout(() => {
-        mediaRecorder.stop();
-      }, 5000); // 5 segundos de grabación por bloque
+      if (modoDictado === 'automatico') {
+        mediaRecorder.start(3000);
+      } else {
+        chunks = [];
+        mediaRecorder.start();
+      }
 
       micButton.classList.add('active');
       isRecording = true;
@@ -179,7 +216,6 @@ function renderAtajos() {
   });
 }
 
-// impedir cierre al clicar dentro
 document.querySelectorAll('.dropdown-content').forEach(drop => {
   drop.addEventListener('click', e => e.stopPropagation());
 });
