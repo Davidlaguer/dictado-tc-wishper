@@ -8,13 +8,14 @@ const historialBtn = document.getElementById('historial-button');
 const historialList = document.getElementById('historial-list');
 const atajosBtn = document.getElementById('atajo-button');
 const atajosPanel = document.getElementById('atajo-dropdown');
-const modoManualBtn = document.getElementById('modo-manual-btn');
-const modoAutoBtn = document.getElementById('modo-automatico-btn');
-const modoEstado = document.getElementById('modo-estado');
 const toggleAppBtn = document.getElementById('modo-app-button');
 const addAtajoBtn = document.getElementById('crear-atajo-button');
 const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
+
+const modoManualBtn = document.getElementById('modo-manual-btn');
+const modoAutoBtn = document.getElementById('modo-automatico-btn');
+const modoEstado = document.getElementById('modo-estado');
 
 const popup = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
@@ -28,28 +29,35 @@ let historial = JSON.parse(localStorage.getItem('historial') || '[]');
 let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 let modoDictado = localStorage.getItem('modoDictado') || 'manual';
 
-// === Actualiza UI de modo ===
-function actualizarModoUI() {
-  modoManualBtn.classList.toggle('active', modoDictado === 'manual');
-  modoAutoBtn.classList.toggle('active', modoDictado === 'automatico');
-  modoEstado.textContent = `🎙️ Estás dictando en modo ${modoDictado.toUpperCase()}`;
-  transcriptionBox.placeholder = `Ej. Modo plantillas. TC de abdomen...\nEstás dictando en modo ${modoDictado.toUpperCase()}`;
+// === Inicialización ===
+document.addEventListener('DOMContentLoaded', () => {
+  renderHistorial();
+  renderAtajos();
+  actualizarModo();
+});
+
+function actualizarModo() {
+  if (modoDictado === 'manual') {
+    modoManualBtn.classList.add('active');
+    modoAutoBtn.classList.remove('active');
+    modoEstado.textContent = '🎙️ Estás dictando en modo MANUAL';
+  } else {
+    modoManualBtn.classList.remove('active');
+    modoAutoBtn.classList.add('active');
+    modoEstado.textContent = '🎙️ Estás dictando en modo AUTOMÁTICO';
+  }
+  localStorage.setItem('modoDictado', modoDictado);
 }
 
-// === Cambiar modo ===
 modoManualBtn.addEventListener('click', () => {
   modoDictado = 'manual';
-  localStorage.setItem('modoDictado', modoDictado);
-  actualizarModoUI();
+  actualizarModo();
 });
 
 modoAutoBtn.addEventListener('click', () => {
   modoDictado = 'automatico';
-  localStorage.setItem('modoDictado', modoDictado);
-  actualizarModoUI();
+  actualizarModo();
 });
-
-actualizarModoUI();
 
 function aplicarCorrecciones(texto) {
   return texto
@@ -57,11 +65,6 @@ function aplicarCorrecciones(texto) {
     .replace(/\bpunto\b/gi, '.')
     .replace(/\bcoma\b/gi, ',');
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  renderHistorial();
-  renderAtajos();
-});
 
 micButton.addEventListener('click', async () => {
   if (!isRecording) {
@@ -76,7 +79,6 @@ micButton.addEventListener('click', async () => {
             const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
             const formData = new FormData();
             formData.append('audio', audioBlob, 'audio.webm');
-
             try {
               const res = await fetch('/transcribe', { method: 'POST', body: formData });
               const data = await res.json();
@@ -86,7 +88,7 @@ micButton.addEventListener('click', async () => {
                 transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
               }
             } catch (err) {
-              console.error('Error enviando audio:', err);
+              console.error('Error transcribiendo:', err);
             }
           } else {
             chunks.push(e.data);
@@ -109,7 +111,7 @@ micButton.addEventListener('click', async () => {
               transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
             }
           } catch (err) {
-            console.error('Error enviando audio:', err);
+            console.error('Error transcribiendo:', err);
           }
         }
         micButton.classList.remove('active');
@@ -117,7 +119,7 @@ micButton.addEventListener('click', async () => {
       };
 
       if (modoDictado === 'automatico') {
-        mediaRecorder.start(3000); // transcripción continua cada 3 s
+        mediaRecorder.start(3000); // bloques de 3 segundos
       } else {
         chunks = [];
         mediaRecorder.start();

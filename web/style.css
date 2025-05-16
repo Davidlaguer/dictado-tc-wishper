@@ -48,6 +48,40 @@ header h1 {
   gap: 8px;
 }
 
+/* === MODO DICTADO SELECTOR === */
+.modo-dictado-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.modo-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.modo-toggle button {
+  padding: 6px 12px;
+  font-size: 14px;
+  border: 1px solid #999;
+  background: #eee;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.modo-toggle button.selected {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.modo-estado {
+  font-size: 14px;
+  color: #555;
+}
+
 /* === TOOLBAR BUTTONS === */
 .menu-buttons {
   display: flex;
@@ -160,7 +194,6 @@ button:hover {
   white-space: pre-wrap;
 }
 
-/* === POPUP: botones internos === */
 .popup-buttons {
   display: flex;
   justify-content: flex-end;
@@ -172,7 +205,6 @@ button:hover {
   padding: 6px 12px;
 }
 
-/* === POPUP VISIBILIDAD === */
 .popup.show {
   display: block;
 }
@@ -207,7 +239,6 @@ button:hover {
   display: block;
 }
 
-/* Triángulo de indicador */
 .bottom-dropdowns .dropdown-content::before {
   content: "";
   position: absolute;
@@ -217,14 +248,12 @@ button:hover {
   border-bottom-color: white;
 }
 
-/* alinea inputs y botón en línea */
 .dropdown-content .new-atajo-form {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-/* listas internas */
 .dropdown-content ul {
   list-style: none;
   margin: 0;
@@ -240,7 +269,6 @@ button:hover {
   background-color: #eee;
 }
 
-/* mantiene resto de reglas */
 #historial-list li,
 #atajos-guardados li {
   list-style: none;
@@ -289,33 +317,4 @@ button:hover {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-/* === NUEVOS: botones de modo de dictado === */
-.modo-toggle {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  align-items: center;
-}
-
-.modo-toggle .modo-btn {
-  background: #eee;
-  border: 1px solid #aaa;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.modo-toggle .modo-btn.selected {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.modo-estado {
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
 }
