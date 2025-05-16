@@ -12,8 +12,8 @@ const toggleAppBtn = document.getElementById('modo-app-button');
 const addAtajoBtn = document.getElementById('crear-atajo-button');
 const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
-const modoBtn = document.getElementById('modo-dictado-button');
-const modoEstado = document.getElementById('modo-estado');
+const modoManualBtn = document.getElementById('modo-manual');
+const modoAutoBtn = document.getElementById('modo-auto');
 
 const popup = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
@@ -27,16 +27,29 @@ let historial = JSON.parse(localStorage.getItem('historial') || '[]');
 let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 let modoDictado = localStorage.getItem('modoDictado') || 'manual';
 
-function actualizarTextoModo() {
-  modoBtn.textContent = `Cambiar a modo ${modoDictado === 'manual' ? 'automático' : 'manual'}`;
-  modoEstado.textContent = `🎙️ Estás dictando en modo ${modoDictado.toUpperCase()}`;
+function actualizarModoVisual() {
+  if (modoDictado === 'manual') {
+    modoManualBtn.classList.add('activo');
+    modoAutoBtn.classList.remove('activo');
+    transcriptionBox.placeholder = "Ej. Modo plantillas. TC de abdomen... (Modo MANUAL)";
+  } else {
+    modoAutoBtn.classList.add('activo');
+    modoManualBtn.classList.remove('activo');
+    transcriptionBox.placeholder = "Dictado en curso... (Modo AUTOMÁTICO)";
+  }
 }
-actualizarTextoModo();
+actualizarModoVisual();
 
-modoBtn.addEventListener('click', () => {
-  modoDictado = (modoDictado === 'manual') ? 'automatico' : 'manual';
+modoManualBtn.addEventListener('click', () => {
+  modoDictado = 'manual';
   localStorage.setItem('modoDictado', modoDictado);
-  actualizarTextoModo();
+  actualizarModoVisual();
+});
+
+modoAutoBtn.addEventListener('click', () => {
+  modoDictado = 'automatico';
+  localStorage.setItem('modoDictado', modoDictado);
+  actualizarModoVisual();
 });
 
 function aplicarCorrecciones(texto) {
@@ -105,10 +118,10 @@ micButton.addEventListener('click', async () => {
       };
 
       if (modoDictado === 'automatico') {
-        mediaRecorder.start(3000); // ⏱️ envía bloques cada 3 segundos
+        mediaRecorder.start(3000);
       } else {
         chunks = [];
-        mediaRecorder.start();     // 🎛️ grabación continua hasta que se detenga
+        mediaRecorder.start();
       }
 
       micButton.classList.add('active');

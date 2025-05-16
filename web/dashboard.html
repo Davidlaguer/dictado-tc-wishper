@@ -17,15 +17,21 @@
     <header>
       <h1>DICTADO INFORMES TC</h1>
       <div class="top-buttons">
-        <button id="modo-app-button">Cambiar a modo automático</button>
-        <div id="modo-estado" class="modo-estado">🎙️ Estás dictando en modo MANUAL</div>
+        <button id="modo-app-button">📱 Modo app móvil</button>
+        <div class="modo-dictado-container">
+          <label for="modo-dictado-manual">Modo de dictado:</label>
+          <div class="modo-toggle">
+            <button id="modo-dictado-manual" class="modo-toggle-btn selected">Manual</button>
+            <button id="modo-dictado-automatico" class="modo-toggle-btn">Automático</button>
+          </div>
+        </div>
         <button id="logout-button">🔓 Cerrar sesión</button>
       </div>
     </header>
 
     <section>
       <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
-      <textarea id="transcription" placeholder="Ej. Modo plantillas. TC de abdomen..."></textarea>
+      <textarea id="transcription" placeholder="Ej. Modo plantillas. TC de abdomen...\nEstás dictando en modo MANUAL"></textarea>
       <div class="controls">
         <button id="mic-button">🎤 Micrófono</button>
         <button id="generate-btn">Generar informe</button>
@@ -67,4 +73,5 @@
   <script src="script.js"></script>
 </body>
 </html>
+
 
