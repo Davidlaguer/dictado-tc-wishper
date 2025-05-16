@@ -318,3 +318,37 @@ button:hover {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* === BARRA DE MODO DE DICTADO === */
+.modo-dictado-bar {
+  margin-bottom: 20px;
+}
+
+.modo-toggle {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.modo-toggle .modo-btn {
+  padding: 6px 14px;
+  font-size: 14px;
+  border: 1px solid #999;
+  background: #f2f2f2;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.modo-toggle .modo-btn.selected {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.modo-estado {
+  font-size: 14px;
+  color: #555;
+  margin-top: 4px;
+}

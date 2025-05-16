@@ -6,6 +6,7 @@
   <title>Dictado Informes TC</title>
   <link rel="stylesheet" href="style.css?v=20250512">
 </head>
+
 <body>
   <div id="loading-overlay">
     <div class="spinner"></div>
@@ -19,21 +20,23 @@
         <button id="modo-app-button">📱 Modo app móvil</button>
         <button id="logout-button">🔓 Cerrar sesión</button>
       </div>
-      <div class="modo-dictado-selector">
-        <span>Modo dictado:</span>
-        <div class="modo-toggle">
-          <button id="modo-manual-btn" class="modo-btn active">Manual</button>
-          <button id="modo-automatico-btn" class="modo-btn">Automático</button>
-        </div>
-        <div id="modo-estado" class="modo-estado">🎙️ Estás dictando en modo MANUAL</div>
-      </div>
     </header>
 
     <section>
+      <!-- NUEVA BARRA DE MODO DICTADO -->
+      <div class="modo-dictado-bar">
+        <label>Modo dictado:</label>
+        <div class="modo-toggle">
+          <button id="modo-manual-btn" class="modo-btn selected">Manual</button>
+          <button id="modo-auto-btn" class="modo-btn">Automático</button>
+        </div>
+        <div id="modo-estado" class="modo-estado">🎙️ Estás dictando en modo MANUAL</div>
+      </div>
+
       <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
       <textarea
         id="transcription"
-        placeholder="Ej. Modo plantillas. TC de abdomen...&#10;Estás dictando en modo MANUAL">
+        placeholder="Ej. Modo plantillas. TC de abdomen...">
       </textarea>
 
       <div class="controls">
