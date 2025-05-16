@@ -1,4 +1,5 @@
 import os
+import io
 import time
 import traceback
 from dotenv import load_dotenv
@@ -58,9 +59,14 @@ def transcribe_audio():
         audio_file = request.files['audio']
         print(f"📥 Recibido archivo: {audio_file.filename}, type={audio_file.content_type}")
 
+        # Convertir a archivo compatible con OpenAI API
+        audio_bytes = audio_file.read()
+        file_stream = io.BytesIO(audio_bytes)
+        file_stream.name = "audio.webm"
+
         result = client.audio.transcriptions.create(
             model="whisper-1",
-            file=audio_file,
+            file=file_stream,
             language="es"
         )
 
@@ -68,7 +74,6 @@ def transcribe_audio():
         return jsonify(text=result.text)
 
     except Exception as e:
-        import traceback
         print("❌ Error al transcribir:\n", traceback.format_exc())
         return jsonify(error="Error interno del servidor"), 500
 
