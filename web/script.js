@@ -83,12 +83,12 @@ function renderAtajos() {
 
 function actualizarModo() {
   if (modoDictado === 'manual') {
-    modoManualBtn.classList.add('active');
-    modoAutoBtn.classList.remove('active');
+    modoManualBtn.classList.add('selected');
+    modoAutoBtn.classList.remove('selected');
     modoEstado.textContent = '🎙️ Estás dictando en modo MANUAL';
   } else {
-    modoManualBtn.classList.remove('active');
-    modoAutoBtn.classList.add('active');
+    modoManualBtn.classList.remove('selected');
+    modoAutoBtn.classList.add('selected');
     modoEstado.textContent = '🎙️ Estás dictando en modo AUTOMÁTICO';
   }
   localStorage.setItem('modoDictado', modoDictado);
