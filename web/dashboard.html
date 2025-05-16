@@ -1,28 +1,47 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dictado Informes TC</title>
-  <link rel="stylesheet" href="style.css?v=20250512">
+  <link rel="stylesheet" href="style.css?v=20250512"/>
   <style>
-    .modo-buttons {
+    .modo-dictado-selector {
+      margin-top: 20px;
       display: flex;
-      gap: 10px;
-      margin-top: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .modo-buttons button {
+
+    .modo-dictado-selector span {
+      font-weight: bold;
+    }
+
+    .modo-toggle {
+      display: flex;
+      gap: 8px;
+    }
+
+    .modo-btn {
       padding: 6px 12px;
-      font-size: 14px;
-      border: 1px solid #999;
-      background: #eee;
+      border: 1px solid #007bff;
+      background: white;
+      color: #007bff;
       border-radius: 6px;
       cursor: pointer;
+      font-size: 14px;
     }
-    .modo-buttons button.active {
-      background-color: #007bff;
+
+    .modo-btn.selected {
+      background: #007bff;
       color: white;
-      border-color: #007bff;
+    }
+
+    .modo-estado {
+      font-size: 14px;
+      font-style: italic;
+      margin-left: 12px;
     }
   </style>
 </head>
@@ -40,19 +59,22 @@
         <button id="modo-app-button">📱 Modo app móvil</button>
         <button id="logout-button">🔓 Cerrar sesión</button>
       </div>
+      <div class="modo-dictado-selector">
+        <span>Modo dictado:</span>
+        <div class="modo-toggle">
+          <button id="modo-manual-btn" class="modo-btn selected">Manual</button>
+          <button id="modo-auto-btn" class="modo-btn">Automático</button>
+        </div>
+        <div id="modo-estado" class="modo-estado">🎙️ Estás dictando en modo MANUAL</div>
+      </div>
     </header>
 
     <section>
       <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
       <textarea
         id="transcription"
-        placeholder="Ej. Modo plantillas. TC de abdomen...&#10;Estás dictando en modo MANUAL">
+        placeholder="Ej. Modo plantillas. TC de abdomen...">
       </textarea>
-
-      <div class="modo-buttons">
-        <button id="modo-manual-btn" class="active">Manual</button>
-        <button id="modo-automatico-btn">Automático</button>
-      </div>
 
       <div class="controls">
         <button id="mic-button">🎤 Micrófono</button>
@@ -72,11 +94,11 @@
         <div id="atajo-dropdown" class="dropdown-content">
           <div class="new-atajo-form">
             <strong>➕ Nuevo atajo</strong>
-            <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
-            <input type="text" id="atajo-valor" placeholder="Texto sustituto">
+            <input type="text" id="atajo-clave" placeholder="Palabra a sustituir"/>
+            <input type="text" id="atajo-valor" placeholder="Texto sustituto"/>
             <button id="crear-atajo-button">Añadir atajo</button>
           </div>
-          <hr>
+          <hr/>
           <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
           <ul id="atajos-guardados"></ul>
         </div>
@@ -95,5 +117,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
-

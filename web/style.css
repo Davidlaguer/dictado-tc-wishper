@@ -290,3 +290,32 @@ button:hover {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* === NUEVOS: botones de modo de dictado === */
+.modo-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.modo-toggle .modo-btn {
+  background: #eee;
+  border: 1px solid #aaa;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modo-toggle .modo-btn.selected {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.modo-estado {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
