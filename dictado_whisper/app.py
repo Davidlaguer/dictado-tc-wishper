@@ -2,6 +2,8 @@ import os
 import io
 import time
 import traceback
+import subprocess
+import tempfile
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -59,16 +61,25 @@ def transcribe_audio():
         audio_file = request.files['audio']
         print(f"📥 Recibido archivo: {audio_file.filename}, type={audio_file.content_type}")
 
-        # Convertir a archivo compatible con OpenAI API
-        audio_bytes = audio_file.read()
-        file_stream = io.BytesIO(audio_bytes)
-        file_stream.name = "audio.webm"
+        # Guardar el archivo temporalmente
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_path = os.path.join(tmpdir, 'input.webm')
+            output_path = os.path.join(tmpdir, 'output.mp3')
+            audio_file.save(input_path)
 
-        result = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=file_stream,
-            language="es"
-        )
+            # Convertir a mp3 con ffmpeg
+            subprocess.run(
+                ['ffmpeg', '-i', input_path, output_path],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+
+            # Enviar a Whisper API
+            with open(output_path, 'rb') as mp3_file:
+                result = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=mp3_file,
+                    language="es"
+                )
 
         print("✅ Transcripción completada")
         return jsonify(text=result.text)
