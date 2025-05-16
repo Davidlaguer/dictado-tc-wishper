@@ -14,7 +14,7 @@ const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
 
 const modoManualBtn = document.getElementById('modo-manual-btn');
-const modoAutoBtn = document.getElementById('modo-automatico-btn');
+const modoAutoBtn = document.getElementById('modo-auto-btn');
 const modoEstado = document.getElementById('modo-estado');
 
 const popup = document.getElementById('popup');
@@ -67,18 +67,26 @@ function aplicarCorrecciones(texto) {
 }
 
 micButton.addEventListener('click', async () => {
-  if (isRecording) {
-    mediaRecorder.stop();
-    micButton.classList.remove('active');
-    isRecording = false;
-    return;
-  }
+if (isRecording) {
+  mediaRecorder.stop();
+  micButton.classList.remove('active');
+  isRecording = false;
+  return;
+}
+if (mediaRecorder && mediaRecorder.state === 'recording') {
+  console.warn("Ya se está grabando. Ignorado doble clic.");
+  return;
+}
+
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    isRecording = true;
-    micButton.classList.add('active');
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+  mediaRecorder.stop();
+}
+mediaRecorder = new MediaRecorder(stream);
+isRecording = true;
+micButton.classList.add('active');
 
     if (modoDictado === 'automatico') {
       mediaRecorder.ondataavailable = async e => {
@@ -125,9 +133,10 @@ micButton.addEventListener('click', async () => {
 
   } catch (e) {
     alert('Error con el micrófono: ' + e.message);
-    micButton.classList.remove('active');
-    isRecording = false;
-  }
+isRecording = false;
+mediaRecorder = null;
+micButton.classList.remove('active');
+
 });
 
 copyBtn.addEventListener('click', () => {
