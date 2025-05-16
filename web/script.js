@@ -248,3 +248,4 @@ document.addEventListener('click', () => {
 toggleAppBtn?.addEventListener('click', () => {
   window.open('index.html', '_blank', 'width=540,height=720');
 });
+
