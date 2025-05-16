@@ -1,265 +1,97 @@
-// === Elementos DOM ===
-const transcriptionBox = document.getElementById('transcription');
-const micButton = document.getElementById('mic-button');
-const generateBtn = document.getElementById('generate-btn');
-const resetBtn = document.getElementById('reset-btn');
-const copyBtn = document.getElementById('copy-btn');
-const historialBtn = document.getElementById('historial-button');
-const historialList = document.getElementById('historial-list');
-const atajosBtn = document.getElementById('atajo-button');
-const atajosPanel = document.getElementById('atajo-dropdown');
-const toggleAppBtn = document.getElementById('modo-app-button');
-const addAtajoBtn = document.getElementById('crear-atajo-button');
-const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
-const atajosGuardadosList = document.getElementById('atajos-guardados');
-const modoManualBtn = document.getElementById('modo-manual');
-const modoAutoBtn = document.getElementById('modo-auto');
-
-const popup = document.getElementById('popup');
-const popupContent = document.getElementById('popup-content');
-const popupCopyBtn = document.getElementById('popup-copy-btn');
-const popupCloseBtn = document.getElementById('popup-close-btn');
-const loadingOverlay = document.getElementById('loading-overlay');
-
-let isRecording = false;
-let mediaRecorder;
-let historial = JSON.parse(localStorage.getItem('historial') || '[]');
-let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
-let modoDictado = localStorage.getItem('modoDictado') || 'manual';
-
-function actualizarModoVisual() {
-  if (modoDictado === 'manual') {
-    modoManualBtn.classList.add('activo');
-    modoAutoBtn.classList.remove('activo');
-    transcriptionBox.placeholder = "Ej. Modo plantillas. TC de abdomen... (Modo MANUAL)";
-  } else {
-    modoAutoBtn.classList.add('activo');
-    modoManualBtn.classList.remove('activo');
-    transcriptionBox.placeholder = "Dictado en curso... (Modo AUTOMÁTICO)";
-  }
-}
-actualizarModoVisual();
-
-modoManualBtn.addEventListener('click', () => {
-  modoDictado = 'manual';
-  localStorage.setItem('modoDictado', modoDictado);
-  actualizarModoVisual();
-});
-
-modoAutoBtn.addEventListener('click', () => {
-  modoDictado = 'automatico';
-  localStorage.setItem('modoDictado', modoDictado);
-  actualizarModoVisual();
-});
-
-function aplicarCorrecciones(texto) {
-  return texto
-    .replace(/\bpunto y coma\b/gi, ';')
-    .replace(/\bpunto\b/gi, '.')
-    .replace(/\bcoma\b/gi, ',');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  renderHistorial();
-  renderAtajos();
-});
-
-micButton.addEventListener('click', async () => {
-  if (!isRecording) {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-      let chunks = [];
-
-      mediaRecorder.ondataavailable = async e => {
-        if (e.data.size > 0) {
-          if (modoDictado === 'automatico') {
-            const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'audio.webm');
-
-            try {
-              const res = await fetch('/transcribe', { method: 'POST', body: formData });
-              const data = await res.json();
-              if (data.text) {
-                const corregido = aplicarCorrecciones(data.text);
-                transcriptionBox.value += corregido.trim() + ' ';
-                transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-              }
-            } catch (err) {
-              console.error('Error enviando audio:', err);
-            }
-          } else {
-            chunks.push(e.data);
-          }
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        if (modoDictado === 'manual' && chunks.length > 0) {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'audio.webm');
-
-          try {
-            const res = await fetch('/transcribe', { method: 'POST', body: formData });
-            const data = await res.json();
-            if (data.text) {
-              const corregido = aplicarCorrecciones(data.text);
-              transcriptionBox.value += corregido.trim() + ' ';
-              transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-            }
-          } catch (err) {
-            console.error('Error enviando audio:', err);
-          }
-        }
-        micButton.classList.remove('active');
-        isRecording = false;
-      };
-
-      if (modoDictado === 'automatico') {
-        mediaRecorder.start(3000);
-      } else {
-        chunks = [];
-        mediaRecorder.start();
-      }
-
-      micButton.classList.add('active');
-      isRecording = true;
-
-    } catch (e) {
-      alert('Error con el micrófono: ' + e.message);
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dictado Informes TC</title>
+  <link rel="stylesheet" href="style.css?v=20250512">
+  <style>
+    .modo-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
     }
-  } else {
-    mediaRecorder.stop();
-    isRecording = false;
-  }
-});
-
-copyBtn.addEventListener('click', () => {
-  transcriptionBox.select();
-  document.execCommand('copy');
-});
-
-popupCopyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(popupContent.textContent);
-});
-
-popupCloseBtn.addEventListener('click', () => {
-  popup.classList.remove('show');
-});
-
-generateBtn.addEventListener('click', async () => {
-  const dictado = transcriptionBox.value.trim();
-  if (!dictado) return alert('Dictado vacío');
-
-  generateBtn.textContent = '⏳ Generando...';
-  generateBtn.disabled = true;
-  loadingOverlay.style.display = 'flex';
-
-  try {
-    const res = await fetch('/informe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dictado })
-    });
-
-    const data = await res.json();
-    if (data.informe) {
-      popupContent.textContent = data.informe;
-      popup.classList.add('show');
-      guardarInforme(data.informe);
-    } else {
-      alert(data.error || 'Error al generar informe');
+    .modo-buttons button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border: 1px solid #999;
+      background: #eee;
+      border-radius: 6px;
+      cursor: pointer;
     }
-  } catch (e) {
-    console.error(e);
-    alert('Error al conectar con el servidor');
-  } finally {
-    loadingOverlay.style.display = 'none';
-    generateBtn.textContent = 'Generar informe';
-    generateBtn.disabled = false;
-  }
-});
+    .modo-buttons button.active {
+      background-color: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+  </style>
+</head>
 
-resetBtn.addEventListener('click', () => {
-  transcriptionBox.value = '';
-});
+<body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Generando informe...</p>
+  </div>
 
-function guardarInforme(texto) {
-  const fecha = new Date().toLocaleString();
-  historial.unshift({ fecha, texto });
-  localStorage.setItem('historial', JSON.stringify(historial));
-  renderHistorial();
-}
+  <div id="main-container">
+    <header>
+      <h1>DICTADO INFORMES TC</h1>
+      <div class="top-buttons">
+        <button id="modo-app-button">📱 Modo app móvil</button>
+        <button id="logout-button">🔓 Cerrar sesión</button>
+      </div>
+    </header>
 
-function renderHistorial() {
-  historialList.innerHTML = '';
-  historial.forEach(({ fecha, texto }, i) => {
-    const li = document.createElement('li');
-    li.textContent = `[${fecha}]`;
-    li.addEventListener('click', () => {
-      popupContent.textContent = texto;
-      popup.classList.add('show');
-    });
-    const del = document.createElement('button');
-    del.textContent = '🗑';
-    del.addEventListener('click', () => {
-      historial.splice(i, 1);
-      localStorage.setItem('historial', JSON.stringify(historial));
-      renderHistorial();
-    });
-    li.appendChild(del);
-    historialList.appendChild(li);
-  });
-}
+    <section>
+      <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
+      <textarea
+        id="transcription"
+        placeholder="Ej. Modo plantillas. TC de abdomen...&#10;Estás dictando en modo MANUAL">
+      </textarea>
 
-function renderAtajos() {
-  atajosGuardadosList.innerHTML = '';
-  Object.entries(atajos).forEach(([k, v]) => {
-    const li = document.createElement('li');
-    li.textContent = `${k} → ${v}`;
-    const btn = document.createElement('button');
-    btn.textContent = '🗑';
-    btn.onclick = () => {
-      delete atajos[k];
-      localStorage.setItem('atajos', JSON.stringify(atajos));
-      renderAtajos();
-    };
-    li.appendChild(btn);
-    atajosGuardadosList.appendChild(li);
-  });
-}
+      <div class="modo-buttons">
+        <button id="modo-manual-btn" class="active">Manual</button>
+        <button id="modo-automatico-btn">Automático</button>
+      </div>
 
-document.querySelectorAll('.dropdown-content').forEach(drop => {
-  drop.addEventListener('click', e => e.stopPropagation());
-});
+      <div class="controls">
+        <button id="mic-button">🎤 Micrófono</button>
+        <button id="generate-btn">Generar informe</button>
+        <button id="copy-btn">📋 Copiar dictado</button>
+        <button id="reset-btn">♻️ Nuevo dictado</button>
+      </div>
+    </section>
 
-historialBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  historialList.classList.toggle('show');
-});
+    <div class="bottom-dropdowns">
+      <div class="dropdown">
+        <button id="historial-button">📁 Historial</button>
+        <ul id="historial-list" class="dropdown-content"></ul>
+      </div>
+      <div class="dropdown">
+        <button id="atajo-button">⚙️ Atajos</button>
+        <div id="atajo-dropdown" class="dropdown-content">
+          <div class="new-atajo-form">
+            <strong>➕ Nuevo atajo</strong>
+            <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
+            <input type="text" id="atajo-valor" placeholder="Texto sustituto">
+            <button id="crear-atajo-button">Añadir atajo</button>
+          </div>
+          <hr>
+          <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
+          <ul id="atajos-guardados"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
 
-atajosBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  atajosPanel.classList.toggle('show');
-});
+  <div id="popup" class="popup">
+    <pre id="popup-content"></pre>
+    <div class="popup-buttons">
+      <button id="popup-copy-btn">📋 Copiar informe</button>
+      <button id="popup-close-btn">✖️ Cerrar</button>
+    </div>
+  </div>
 
-toggleAtajosListBtn.addEventListener('click', () => {
-  if (atajosGuardadosList.style.display === 'block') {
-    atajosGuardadosList.style.display = 'none';
-    toggleAtajosListBtn.textContent = '📋 Ver atajos guardados';
-  } else {
-    atajosGuardadosList.style.display = 'block';
-    toggleAtajosListBtn.textContent = '❌ Ocultar atajos guardados';
-  }
-});
-
-document.addEventListener('click', () => {
-  historialList.classList.remove('show');
-  atajosPanel.classList.remove('show');
-});
-
-toggleAppBtn?.addEventListener('click', () => {
-  window.open('index.html', '_blank', 'width=540,height=720');
-});
+  <script src="script.js"></script>
+</body>
+</html>
