@@ -8,13 +8,13 @@ const historialBtn = document.getElementById('historial-button');
 const historialList = document.getElementById('historial-list');
 const atajosBtn = document.getElementById('atajo-button');
 const atajosPanel = document.getElementById('atajo-dropdown');
+const modoManualBtn = document.getElementById('modo-manual-btn');
+const modoAutoBtn = document.getElementById('modo-automatico-btn');
+const modoEstado = document.getElementById('modo-estado');
 const toggleAppBtn = document.getElementById('modo-app-button');
 const addAtajoBtn = document.getElementById('crear-atajo-button');
 const toggleAtajosListBtn = document.getElementById('toggle-atajos-list');
 const atajosGuardadosList = document.getElementById('atajos-guardados');
-const modoManualBtn = document.getElementById('modo-manual-btn');
-const modoAutoBtn = document.getElementById('modo-auto-btn');
-const modoEstado = document.getElementById('modo-estado');
 
 const popup = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
@@ -28,25 +28,28 @@ let historial = JSON.parse(localStorage.getItem('historial') || '[]');
 let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 let modoDictado = localStorage.getItem('modoDictado') || 'manual';
 
-function actualizarTextoModo() {
-  modoManualBtn.classList.toggle('selected', modoDictado === 'manual');
-  modoAutoBtn.classList.toggle('selected', modoDictado === 'automatico');
+// === Actualiza UI de modo ===
+function actualizarModoUI() {
+  modoManualBtn.classList.toggle('active', modoDictado === 'manual');
+  modoAutoBtn.classList.toggle('active', modoDictado === 'automatico');
   modoEstado.textContent = `🎙️ Estás dictando en modo ${modoDictado.toUpperCase()}`;
+  transcriptionBox.placeholder = `Ej. Modo plantillas. TC de abdomen...\nEstás dictando en modo ${modoDictado.toUpperCase()}`;
 }
 
-actualizarTextoModo();
-
+// === Cambiar modo ===
 modoManualBtn.addEventListener('click', () => {
   modoDictado = 'manual';
   localStorage.setItem('modoDictado', modoDictado);
-  actualizarTextoModo();
+  actualizarModoUI();
 });
 
 modoAutoBtn.addEventListener('click', () => {
   modoDictado = 'automatico';
   localStorage.setItem('modoDictado', modoDictado);
-  actualizarTextoModo();
+  actualizarModoUI();
 });
+
+actualizarModoUI();
 
 function aplicarCorrecciones(texto) {
   return texto
@@ -114,7 +117,7 @@ micButton.addEventListener('click', async () => {
       };
 
       if (modoDictado === 'automatico') {
-        mediaRecorder.start(3000);
+        mediaRecorder.start(3000); // transcripción continua cada 3 s
       } else {
         chunks = [];
         mediaRecorder.start();
