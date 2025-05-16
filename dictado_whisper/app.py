@@ -4,7 +4,6 @@ import traceback
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO
 from openai import OpenAI
 from werkzeug.utils import secure_filename
 
@@ -22,7 +21,6 @@ assistant_id = "asst_fgKQWIHbzkBVc93SOD6iSYTh"
 # — App Flask —
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), '../web'), static_url_path='')
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # — Endpoint de salud —
 @app.route('/health')
@@ -102,4 +100,4 @@ def generar_informe():
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
     print(f"🔥 Servidor iniciado en puerto {port}")
-    socketio.run(app, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port)
