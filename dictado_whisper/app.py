@@ -12,7 +12,10 @@ from openai import OpenAI
 from werkzeug.utils import secure_filename
 from flask import request, jsonify
 
+load_dotenv()
+
 with open("Errores_assistant_TC_final.json", "r", encoding="utf-8") as f:
+    errores_assistant = json.load(f)
 
 # — Cargar clave OpenAI —
 load_dotenv()
