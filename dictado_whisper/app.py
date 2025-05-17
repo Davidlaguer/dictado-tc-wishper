@@ -10,10 +10,18 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
 from werkzeug.utils import secure_filename
-from flask import request, jsonify
 
-with open("Errores_assistant_TC_final.json", "r", encoding="utf-8") as f:
-    errores_assistant = json.load(f)
+load_dotenv()
+
+# — Carga segura del archivo de errores —
+errores_assistant = []
+errores_path = os.path.join(os.path.dirname(__file__), "Errores_assistant_TC_final.json")
+if os.path.exists(errores_path):
+    with open(errores_path, "r", encoding="utf-8") as f:
+        errores_assistant = json.load(f)
+    print(f"✅ Cargados {len(errores_assistant)} errores conocidos")
+else:
+    print("⚠️ Advertencia: Errores_assistant_TC_final.json no encontrado. Revisión desactivada.")
 
 # — Cargar clave OpenAI —
 load_dotenv()
