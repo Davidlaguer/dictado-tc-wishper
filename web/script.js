@@ -30,15 +30,27 @@ let atajos = JSON.parse(localStorage.getItem('atajos') || '{}');
 let modoDictado = localStorage.getItem('modoDictado') || 'manual';
 
 function aplicarCorrecciones(texto) {
-  return texto
+  let corregido = texto
     .replace(/\bpunto y coma\b/gi, ';')
     .replace(/\bpunto\b/gi, '.')
     .replace(/\bcoma\b/gi, ',');
+
+  // Aplicar atajos personalizados
+  Object.entries(atajos).forEach(([clave, valor]) => {
+    const regex = new RegExp(`\\b${clave}\\b`, 'gi');
+    corregido = corregido.replace(regex, valor);
+  });
+
+  return corregido;
 }
 
 function guardarInforme(texto) {
-  const fecha = new Date().toLocaleString();
-  historial.unshift({ fecha, texto });
+  const ahora = new Date();
+  const nombre = ahora.toLocaleString();
+  const timestamp = ahora.toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const titulo = 'Informe_' + timestamp.slice(6,8) + '_' + timestamp.slice(4,6) + '_' + timestamp.slice(0,4) + '_' + timestamp.slice(8,14);
+
+  historial.unshift({ fecha: nombre, titulo, texto });
   localStorage.setItem('historial', JSON.stringify(historial));
   renderHistorial();
 }
@@ -47,7 +59,7 @@ function renderHistorial() {
   historialList.innerHTML = '';
   historial.forEach(({ fecha, texto }, i) => {
     const li = document.createElement('li');
-    li.textContent = `[${fecha}]`;
+    li.textContent = titulo;
     li.addEventListener('click', () => {
       popupContent.textContent = texto;
       popup.classList.add('show');
