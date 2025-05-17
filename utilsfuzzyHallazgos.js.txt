@@ -1,0 +1,25 @@
+// utils/fuzzyHallazgos.js
+const stringSimilarity = require('string-similarity');
+const hallazgosTabular = require('../data/Hallazgos_Tabular_TC_COMPLETO.json');
+
+function buscarHallazgosFuzzy(textoDictado) {
+  const coincidencias = [];
+
+  for (const entrada of hallazgosTabular) {
+    for (const hallazgo of entrada.hallazgos) {
+      const similitud = stringSimilarity.findBestMatch(textoDictado.toLowerCase(), [hallazgo.texto.toLowerCase()]);
+      if (similitud.bestMatch.rating >= 0.75) {
+        coincidencias.push({
+          bloque: entrada.bloque,
+          textoDetectado: textoDictado,
+          hallazgoCoincidente: hallazgo.texto,
+          tipo: hallazgo.tipo,
+          accion: hallazgo.accion,
+          score: similitud.bestMatch.rating
+        });
+      }
+    }
+  }
+
+  return coincidencias;
+}
