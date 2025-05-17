@@ -116,6 +116,25 @@ document.addEventListener('DOMContentLoaded', () => {
     actualizarModo();
   });
 
+addAtajoBtn.addEventListener('click', () => {
+  const clave = document.getElementById('atajo-clave').value.trim().toLowerCase();
+  const valor = document.getElementById('atajo-valor').value.trim();
+
+  if (!clave || !valor) {
+    alert('Debes completar ambos campos del atajo');
+    return;
+  }
+
+  atajos[clave] = valor;
+  localStorage.setItem('atajos', JSON.stringify(atajos));
+  renderAtajos();
+  alert('✅ Atajo guardado');
+
+  // Limpiar los campos
+  document.getElementById('atajo-clave').value = '';
+  document.getElementById('atajo-valor').value = '';
+});
+
   modoAutoBtn.addEventListener('click', () => {
     modoDictado = 'automatico';
     actualizarModo();
