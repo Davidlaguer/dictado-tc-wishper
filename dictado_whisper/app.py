@@ -4,11 +4,16 @@ import time
 import traceback
 import subprocess
 import tempfile
+import json
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
 from werkzeug.utils import secure_filename
+from flask import request, jsonify
+
+with open("dictado_whisper/Errores_assistant_TC_final.json", "r", encoding="utf-8") as f:
+    errores_assistant = json.load(f)
 
 # — Cargar clave OpenAI —
 load_dotenv()
@@ -112,6 +117,22 @@ def generar_informe():
         tb = traceback.format_exc()
         print("❌ Error en /informe:\n", tb)
         return jsonify(error="Error interno del servidor"), 500
+
+@app.route('/revisar-errores', methods=['POST'])
+def revisar_errores():
+    texto = (request.get_json() or {}).get("informe", "").strip()
+    coincidencias = []
+
+    for error in errores_assistant:
+        if error['salida_assistant'].strip() in texto:
+            coincidencias.append({
+                "id": error.get("id"),
+                "tipo_error": error.get("tipo_error"),
+                "explicacion": error.get("explicacion_error"),
+                "esperado": error.get("respuesta_esperada")
+            })
+
+    return jsonify(coincidencias=coincidencias)
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5050))
