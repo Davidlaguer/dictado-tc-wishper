@@ -116,6 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
     actualizarModo();
   });
 
+transcriptionBox.addEventListener('input', () => {
+  if (modoDictado === 'automatico') {
+    const cursor = transcriptionBox.selectionStart;
+    transcriptionBox.value = aplicarCorrecciones(transcriptionBox.value);
+    transcriptionBox.selectionEnd = cursor;
+  }
+});
+
 addAtajoBtn.addEventListener('click', () => {
   const clave = document.getElementById('atajo-clave').value.trim().toLowerCase();
   const valor = document.getElementById('atajo-valor').value.trim();
