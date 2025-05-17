@@ -57,9 +57,9 @@ function guardarInforme(texto) {
 
 function renderHistorial() {
   historialList.innerHTML = '';
-  historial.forEach(({ fecha, texto }, i) => {
+  historial.forEach(({ fecha, titulo, texto }, i) => {
     const li = document.createElement('li');
-    li.textContent = titulo;
+    li.textContent = titulo || fecha;
     li.addEventListener('click', () => {
       popupContent.textContent = texto;
       popup.classList.add('show');
