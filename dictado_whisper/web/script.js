@@ -188,30 +188,33 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         mediaRecorder.start(3000);
       } else {
-        let chunks = [];
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'audio.webm');
-          try {
-  	    const res = await fetch('/transcribe', { method: 'POST', body: formData });
-	    const data = await res.json();
-  	    if (data.text) {
-   	      transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
-              transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-            }
-          } catch (err) {
-            console.error('Error en transcripción automática:', err);
-          }
-        };
- 
-          isRecording = false;
-          mediaRecorder = null;
-          micButton.classList.remove('active');
-        };
-        mediaRecorder.start();
+  let chunks = [];
+  mediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = async () => {
+    const audioBlob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+    try {
+      const res = await fetch('/transcribe', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.text) {
+        transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
+        transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
       }
+    } catch (err) {
+      console.error('Error en transcripción manual:', err);
+    } finally {
+      isRecording = false;
+      mediaRecorder = null;
+      micButton.classList.remove('active');
+    }
+  };
+
+  mediaRecorder.start();
+}
 
     } catch (e) {
       alert('Error con el micrófono: ' + e.message);
