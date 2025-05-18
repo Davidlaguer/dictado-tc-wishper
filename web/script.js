@@ -324,7 +324,8 @@ document.querySelectorAll('.dropdown-content').forEach(drop => {
   drop.addEventListener('click', e => e.stopPropagation());
 });
 
-document.addEventListener('click', () => {
-  historialList.classList.remove('show');
-  atajosPanel.classList.remove('show');
+  document.addEventListener('click', () => {
+    historialList.classList.remove('show');
+    atajosPanel.classList.remove('show');
+  });
 });
