@@ -116,36 +116,35 @@ document.addEventListener('DOMContentLoaded', () => {
     actualizarModo();
   });
 
-transcriptionBox.addEventListener('input', () => {
-  if (modoDictado === 'automatico') {
-    const cursor = transcriptionBox.selectionStart;
-    transcriptionBox.value = aplicarCorrecciones(transcriptionBox.value);
-    transcriptionBox.selectionEnd = cursor;
-  }
-});
-
-addAtajoBtn.addEventListener('click', () => {
-  const clave = document.getElementById('atajo-clave').value.trim().toLowerCase();
-  const valor = document.getElementById('atajo-valor').value.trim();
-
-  if (!clave || !valor) {
-    alert('Debes completar ambos campos del atajo');
-    return;
-  }
-
-  atajos[clave] = valor;
-  localStorage.setItem('atajos', JSON.stringify(atajos));
-  renderAtajos();
-  alert('✅ Atajo guardado');
-
-  // Limpiar los campos
-  document.getElementById('atajo-clave').value = '';
-  document.getElementById('atajo-valor').value = '';
-});
-
   modoAutoBtn.addEventListener('click', () => {
     modoDictado = 'automatico';
     actualizarModo();
+  });
+
+  transcriptionBox.addEventListener('input', () => {
+    if (modoDictado === 'automatico') {
+      const cursor = transcriptionBox.selectionStart;
+      transcriptionBox.value = aplicarCorrecciones(transcriptionBox.value);
+      transcriptionBox.selectionEnd = cursor;
+    }
+  });
+
+  addAtajoBtn.addEventListener('click', () => {
+    const clave = document.getElementById('atajo-clave').value.trim().toLowerCase();
+    const valor = document.getElementById('atajo-valor').value.trim();
+
+    if (!clave || !valor) {
+      alert('Debes completar ambos campos del atajo');
+      return;
+    }
+
+    atajos[clave] = valor;
+    localStorage.setItem('atajos', JSON.stringify(atajos));
+    renderAtajos();
+    alert('✅ Atajo guardado');
+
+    document.getElementById('atajo-clave').value = '';
+    document.getElementById('atajo-valor').value = '';
   });
 
   micButton.addEventListener('click', async () => {
