@@ -226,103 +226,102 @@ document.addEventListener('DOMContentLoaded', () => {
     document.execCommand('copy');
   });
 
-  popupCopyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(popupContent.textContent);
-  });
+popupCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(popupContent.textContent);
+});
 
-  popupCloseBtn.addEventListener('click', () => {
-    popup.classList.remove('show');
-  });
+popupCloseBtn.addEventListener('click', () => {
+  popup.classList.remove('show');
+});
 
-  generateBtn.addEventListener('click', async () => {
-    const dictado = transcriptionBox.value.trim();
-    if (!dictado) return alert('Dictado vacío');
+generateBtn.addEventListener('click', async () => {
+  const dictado = transcriptionBox.value.trim();
+  if (!dictado) return alert('Dictado vacío');
 
-    generateBtn.textContent = '⏳ Generando...';
-    generateBtn.disabled = true;
-    loadingOverlay.style.display = 'flex';
+  generateBtn.textContent = '⏳ Generando...';
+  generateBtn.disabled = true;
+  loadingOverlay.style.display = 'flex';
 
-    try {
-      const res = await fetch('/informe', {
+  try {
+    const res = await fetch('/informe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dictado })
+    });
+
+    const data = await res.json();
+
+    if (data.informe) {
+      popupContent.textContent = data.informe;
+      popup.classList.add('show');
+      guardarInforme(data.informe);
+
+      // 🚨 Revisión automática contra errores conocidos
+      fetch('/revisar-errores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dictado })
+        body: JSON.stringify({ informe: data.informe })
+      })
+      .then(res => res.json())
+      .then(errores => {
+        if (errores.coincidencias.length > 0) {
+          const advertencias = errores.coincidencias.map(e =>
+            `⚠️ Error ${e.id} (${e.tipo_error}):\n${e.explicacion}`
+          ).join('\n\n');
+          alert('⚠️ Este informe coincide con errores conocidos:\n\n' + advertencias);
+        }
+      })
+      .catch(err => {
+        console.warn('No se pudo revisar errores conocidos:', err);
       });
 
-      const data = await res.json();
-
-      if (data.informe) {
-  popupContent.textContent = data.informe;
-  popup.classList.add('show');
-  guardarInforme(data.informe);
-
-  // 🚨 Revisión automática contra errores conocidos
-  fetch('/revisar-errores', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ informe: data.informe })
-  })
-  .then(res => res.json())
-  .then(errores => {
-    if (errores.coincidencias.length > 0) {
-      const advertencias = errores.coincidencias.map(e =>
-        `⚠️ Error ${e.id} (${e.tipo_error}):\n${e.explicacion}`
-      ).join('\n\n');
-      alert('⚠️ Este informe coincide con errores conocidos:\n\n' + advertencias);
-    }
-  })
-  .catch(err => {
-    console.warn('No se pudo revisar errores conocidos:', err);
-  });
-}
-
-      } else {
-        alert(data.error || 'Error al generar informe');
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Error al conectar con el servidor');
-    } finally {
-      loadingOverlay.style.display = 'none';
-      generateBtn.textContent = 'Generar informe';
-      generateBtn.disabled = false;
-    }
-  });
-
-  resetBtn.addEventListener('click', () => {
-    transcriptionBox.value = '';
-  });
-
-  historialBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    historialList.classList.toggle('show');
-  });
-
-  atajosBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    atajosPanel.classList.toggle('show');
-  });
-
-  toggleAtajosListBtn.addEventListener('click', () => {
-    if (atajosGuardadosList.style.display === 'block') {
-      atajosGuardadosList.style.display = 'none';
-      toggleAtajosListBtn.textContent = '📋 Ver atajos guardados';
     } else {
-      atajosGuardadosList.style.display = 'block';
-      toggleAtajosListBtn.textContent = '❌ Ocultar atajos guardados';
+      alert(data.error || 'Error al generar informe');
     }
-  });
 
-  toggleAppBtn?.addEventListener('click', () => {
-    window.open('index.html', '_blank', 'width=540,height=720');
-  });
+  } catch (e) {
+    console.error(e);
+    alert('Error al conectar con el servidor');
+  } finally {
+    loadingOverlay.style.display = 'none';
+    generateBtn.textContent = 'Generar informe';
+    generateBtn.disabled = false;
+  }
+});
 
-  document.querySelectorAll('.dropdown-content').forEach(drop => {
-    drop.addEventListener('click', e => e.stopPropagation());
-  });
+resetBtn.addEventListener('click', () => {
+  transcriptionBox.value = '';
+});
 
-  document.addEventListener('click', () => {
-    historialList.classList.remove('show');
-    atajosPanel.classList.remove('show');
-  });
+historialBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  historialList.classList.toggle('show');
+});
+
+atajosBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  atajosPanel.classList.toggle('show');
+});
+
+toggleAtajosListBtn.addEventListener('click', () => {
+  if (atajosGuardadosList.style.display === 'block') {
+    atajosGuardadosList.style.display = 'none';
+    toggleAtajosListBtn.textContent = '📋 Ver atajos guardados';
+  } else {
+    atajosGuardadosList.style.display = 'block';
+    toggleAtajosListBtn.textContent = '❌ Ocultar atajos guardados';
+  }
+});
+
+toggleAppBtn?.addEventListener('click', () => {
+  window.open('index.html', '_blank', 'width=540,height=720');
+});
+
+document.querySelectorAll('.dropdown-content').forEach(drop => {
+  drop.addEventListener('click', e => e.stopPropagation());
+});
+
+document.addEventListener('click', () => {
+  historialList.classList.remove('show');
+  atajosPanel.classList.remove('show');
 });
