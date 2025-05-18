@@ -169,25 +169,33 @@ document.addEventListener('DOMContentLoaded', () => {
       micButton.classList.add('active');
 
       if (modoDictado === 'automatico') {
-        mediaRecorder.ondataavailable = async e => {
-          if (e.data.size > 0) {
-            const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
-            const formData = new FormData();
-            formData.append('audio', audioBlob, 'audio.webm');
-            try {
-              const res = await fetch('/transcribe', { method: 'POST', body: formData });
-              const data = await res.json();
-              if (data.text) {
-                transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
-                transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
-              }
-            } catch (err) {
-              console.error('Error en transcripción automática:', err);
-            }
-          }
-        };
-        mediaRecorder.start(3000);
-      } else {
+  mediaRecorder.ondataavailable = async e => {
+    if (e.data.size > 0) {
+      const audioBlob = new Blob([e.data], { type: 'audio/webm;codecs=opus' });
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+
+      try {
+        const res = await fetch('/transcribe', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.text) {
+          transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
+          transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
+        }
+      } catch (err) {
+        console.error('Error en transcripción automática:', err);
+      }
+    }
+  };
+
+  // 🔁 Inicia grabación continua enviando fragmentos cada 3 s
+  mediaRecorder.start(3000);
+}
+
+ else {
   let chunks = [];
   mediaRecorder.ondataavailable = e => {
     if (e.data.size > 0) chunks.push(e.data);
