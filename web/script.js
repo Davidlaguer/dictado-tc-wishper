@@ -248,29 +248,30 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const data = await res.json();
+
       if (data.informe) {
   popupContent.textContent = data.informe;
   popup.classList.add('show');
   guardarInforme(data.informe);
 
   // 🚨 Revisión automática contra errores conocidos
-  try {
-    const revisar = await fetch('/revisar-errores', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ informe: data.informe })
-    });
-    const errores = await revisar.json();
-
+  fetch('/revisar-errores', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ informe: data.informe })
+  })
+  .then(res => res.json())
+  .then(errores => {
     if (errores.coincidencias.length > 0) {
       const advertencias = errores.coincidencias.map(e =>
         `⚠️ Error ${e.id} (${e.tipo_error}):\n${e.explicacion}`
-      ).join('\\n\\n');
-      alert('⚠️ Este informe coincide con errores conocidos:\\n\\n' + advertencias);
+      ).join('\n\n');
+      alert('⚠️ Este informe coincide con errores conocidos:\n\n' + advertencias);
     }
-  } catch (e) {
-    console.warn('No se pudo revisar errores conocidos:', e);
-  }
+  })
+  .catch(err => {
+    console.warn('No se pudo revisar errores conocidos:', err);
+  });
 }
 
       } else {
