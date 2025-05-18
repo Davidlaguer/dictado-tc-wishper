@@ -195,15 +195,17 @@ document.addEventListener('DOMContentLoaded', () => {
           const formData = new FormData();
           formData.append('audio', audioBlob, 'audio.webm');
           try {
-            const res = await fetch('/transcribe', { method: 'POST', body: formData });
-            const data = await res.json();
-            if (data.text) {
-              transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
+  	    const res = await fetch('/transcribe', { method: 'POST', body: formData });
+	    const data = await res.json();
+  	    if (data.text) {
+   	      transcriptionBox.value += aplicarCorrecciones(data.text).trim() + ' ';
               transcriptionBox.scrollTop = transcriptionBox.scrollHeight;
             }
           } catch (err) {
-            console.error('Error en transcripción manual:', err);
+            console.error('Error en transcripción automática:', err);
           }
+        };
+ 
           isRecording = false;
           mediaRecorder = null;
           micButton.classList.remove('active');
