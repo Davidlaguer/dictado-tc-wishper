@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dictado Informes TC</title>
+  <link rel="stylesheet" href="style.css?v=20250512">
+</head>
+
+<body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Generando informe...</p>
+  </div>
+
+  <div id="main-container">
+    <header>
+      <h1>DICTADO INFORMES TC</h1>
+      <div class="top-buttons">
+        <button id="modo-app-button">📱 Modo app móvil</button>
+        <button id="logout-button">🔓 Cerrar sesión</button>
+      </div>
+    </header>
+
+    <section>
+      <!-- NUEVA BARRA DE MODO DICTADO -->
+      <div class="modo-dictado-bar">
+        <label>Modo dictado:</label>
+        <div class="modo-toggle">
+          <button id="modo-manual-btn" class="modo-btn selected">Manual</button>
+          <button id="modo-auto-btn" class="modo-btn">Automático</button>
+        </div>
+        <div id="modo-estado" class="modo-estado">🎙️ Estás dictando en modo MANUAL</div>
+      </div>
+
+      <label for="transcription">DICTA AQUÍ LOS HALLAZGOS TC:</label>
+      <textarea
+        id="transcription"
+        placeholder="Ej. Modo plantillas. TC de abdomen...">
+      </textarea>
+
+      <div class="controls">
+        <button id="mic-button">🎤 Micrófono</button>
+        <button id="generate-btn">Generar informe</button>
+        <button id="copy-btn">📋 Copiar dictado</button>
+        <button id="reset-btn">♻️ Nuevo dictado</button>
+      </div>
+    </section>
+
+    <div class="bottom-dropdowns">
+      <div class="dropdown">
+        <button id="historial-button">📁 Historial</button>
+        <ul id="historial-list" class="dropdown-content"></ul>
+      </div>
+      <div class="dropdown">
+        <button id="atajo-button">⚙️ Atajos</button>
+        <div id="atajo-dropdown" class="dropdown-content">
+          <div class="new-atajo-form">
+            <strong>➕ Nuevo atajo</strong>
+            <input type="text" id="atajo-clave" placeholder="Palabra a sustituir">
+            <input type="text" id="atajo-valor" placeholder="Texto sustituto">
+            <button id="crear-atajo-button">Añadir atajo</button>
+          </div>
+          <hr>
+          <button id="toggle-atajos-list">📋 Ver atajos guardados</button>
+          <ul id="atajos-guardados"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="popup" class="popup">
+    <pre id="popup-content"></pre>
+    <div class="popup-buttons">
+      <button id="popup-copy-btn">📋 Copiar informe</button>
+      <button id="popup-close-btn">✖️ Cerrar</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
