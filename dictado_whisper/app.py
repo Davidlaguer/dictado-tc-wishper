@@ -35,7 +35,8 @@ client = OpenAI(api_key=api_key)
 assistant_id = "asst_fgKQWIHbzkBVc93SOD6iSYTh"
 
 # — App Flask —
-app = Flask(__name__, static_folder='web', static_url_path='')
+app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'web'), static_url_path='')
+
 CORS(app)
 
 # — Endpoint de salud —
