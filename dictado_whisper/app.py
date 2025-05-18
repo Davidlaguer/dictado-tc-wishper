@@ -35,7 +35,9 @@ client = OpenAI(api_key=api_key)
 assistant_id = "asst_fgKQWIHbzkBVc93SOD6iSYTh"
 
 # — App Flask —
-app = Flask(__name__, static_folder='dictado_whisper/web', static_url_path='')
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+STATIC_PATH = os.path.join(BASE_DIR, 'web')
+app = Flask(__name__, static_folder=STATIC_PATH, static_url_path='')
 
 CORS(app)
 
